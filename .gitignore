@@ -1,0 +1,19 @@
+# General
+
+/.idea/
+
+# Data Files
+
+*.csv
+
+# Compiled files
+
+*.pyc
+
+# Log files
+
+*.log
+
+# Data folder is created automatically
+
+/data/
