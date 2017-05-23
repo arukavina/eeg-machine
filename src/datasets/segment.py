@@ -30,6 +30,8 @@ def load_segment(segment_path, old_segment_format=True, normalize_signal=False, 
     :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
     :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
     """
+    eeg_logger.debug("Starting")
+
     if normalize_signal:
         return load_and_standardize(segment_path, old_segment_format=old_segment_format)
     else:

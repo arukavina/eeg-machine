@@ -1,16 +1,23 @@
 from __future__ import absolute_import
 
+import logging
 import mne
-
-mne.set_log_level(verbose='WARNING')
 
 import sys
 from itertools import chain
 
-from . import feature_extractor
-from . import wavelets
+import src
 
-from .transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+from itertools import chain
+
+import src
+
+from src.features import feature_extractor
+from src.features import wavelets
+from src.features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+
+mne.set_log_level(verbose='WARNING')
+eeg_logger = logging.getLogger(src.get_logger_name())
 
 
 def extract_features_for_segment(segment, transformation=None, feature_length_seconds=60, window_size=5):
@@ -31,10 +38,10 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
         get 10 frames. The length of the lists then depends on the window_size,
         number of channels and number of frequency bands we are examining.
     """
+    eeg_logger.dubug("Starting")
 
     if transformation is None:
         transformation = FFT_TF_xcorr(1, 48, 400, 'usf')
-    # TODO: Assert that the function implements apply()
 
     # Here we define how many windows we will have to concatenate
     # in order to create the features we want
@@ -63,6 +70,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
 
 
 def get_transform(transformation=None, **kwargs):
+    eeg_logger.dubug("Starting")
     if transformation is None:
         return FFT_TF_xcorr(1, 48, 400, 'usf')
     else:
@@ -77,6 +85,7 @@ def extract_features(segment_paths,
                      resample_frequency=None,
                      normalize_signal=False,
                      only_missing_files=True,
+                     file_handler=None,
                      feature_length_seconds=60,
                      window_size=5):
     """
@@ -90,10 +99,13 @@ def extract_features(segment_paths,
     :param resample_frequency:
     :param normalize_signal:
     :param only_missing_files:
+    :param file_handler: fh instance
     :param feature_length_seconds:
     :param window_size:
     :return:
     """
+    eeg_logger.debug("Starting")
+
     feature_extractor.extract(segment_paths,
                               extract_features_for_segment,
                               # Arguments for feature_extractor.extract
@@ -104,12 +116,14 @@ def extract_features(segment_paths,
                               resample_frequency=resample_frequency,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
+                              file_handler=file_handler,
                               # Worker function kwargs:
                               feature_length_seconds=feature_length_seconds,
                               window_size=window_size)
 
 
 if __name__ == '__main__':
+    eeg_logger.dubug("Starting")
 
     import argparse
     parser = argparse.ArgumentParser(description="Calculates features according to Mike Hills winning submission.")

@@ -258,6 +258,7 @@ def extract_features(segment_paths,
                      old_segment_format=True,
                      resample_frequency=None,
                      normalize_signal=False,
+                     file_handler=None,
                      feature_length_seconds=60,
                      window_size=5,
                      no_epochs=False,
@@ -272,6 +273,7 @@ def extract_features(segment_paths,
     :param old_segment_format:
     :param resample_frequency:
     :param normalize_signal:
+    :param file_handler: fh instance
     :param feature_length_seconds:
     :param window_size:
     :param no_epochs:
@@ -288,6 +290,7 @@ def extract_features(segment_paths,
                               resample_frequency=resample_frequency,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
+                              file_handler=file_handler,
                               ## Worker function kwargs:
                               feature_length_seconds=feature_length_seconds,
                               window_size=window_size,

@@ -1,3 +1,9 @@
+"""
+------------------------------------------------------------------------------------------------------
+Script:    Module to configure logging
+------------------------------------------------------------------------------------------------------
+"""
+
 import sys
 import logging
 import logging.handlers
@@ -41,8 +47,8 @@ def setup_logging(name, timestamp, file_components, optional_file_components, ar
     my_log.handlers = []
     my_log.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(asctime)s [%(threadName)-12.12s] [%(levelname)s] ([%(filename)s::%(funcName)s) '
-                                  ':: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
+                                  '([%(filename)s::%(funcName)s) :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 
     # Handlers
     fh_path = os.path.join(log_dir, log_file)

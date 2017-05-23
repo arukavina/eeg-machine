@@ -26,7 +26,7 @@ from sklearn import model_selection, preprocessing
 from sklearn.decomposition import PCA
 
 # Own
-from src.util import file_utils
+from src.util import file_utils as fu
 
 
 def first(iterable):
@@ -235,8 +235,8 @@ def merge_interictal_preictal(interictal, preictal):
     except TypeError:
         logging.warning("TypeError when trying to merge interictal and preictal sets.")
 
-    dataset = pd.concat((interictal, preictal))
-    dataset.sortlevel('segment', inplace=True)
+    dataset = pd.DataFrame(pd.concat((interictal, preictal)))
+    dataset.sort_index('segment', inplace=True)
     return dataset
 
 
@@ -341,33 +341,30 @@ def combine_features(dataframes, labeled=True):
     for dataframe in dataframes:
         normalize_segment_names(dataframe, inplace=True)
     if labeled:
-        combined_dataframes = pd.concat([df.drop('Preictal', axis=1)
-                                         for df in dataframes],
-                                        axis=1)
+        combined_dataframes = pd.DataFrame(pd.concat([df.drop('Preictal', axis=1) for df in dataframes], axis=1))
         combined_dataframes['Preictal'] = dataframes[0]['Preictal']
     else:
-        combined_dataframes = pd.concat(dataframes,
-                                        axis=1)
+        combined_dataframes = pd.DataFrame(pd.concat(dataframes, axis=1))
 
-    combined_dataframes.sortlevel('segment', inplace=True)
+    combined_dataframes.sort_index('segment', inplace=True)
     return combined_dataframes
 
 
-def normalize_segment_names(dataframe, inplace=False):
+def normalize_segment_names(df, inplace=False):
     """
     Makes the segment index of the dataframe have names which correspond to the original .mat segment names.
-    :param dataframe: The dataframe with segment names
+    :param df: The dataframe with segment names
     :param inplace: If True, the segment index will be changed in place in the given data frame.
     :return: A DataFrame where the segment name part of the index has been canonicalized. If inplace is True, the
              orignal dataframe is returned, otherwise a copy is returned.
     """
 
-    index_values = dataframe.index.get_values()
-    fixed_values = [(file_utils.get_segment_name(filename), frame) for filename, frame in index_values]
+    index_values = df.index.get_values()
+    fixed_values = [(fu.get_segment_name(filename), frame) for filename, frame in index_values]
     if not inplace:
-        dataframe = dataframe.copy()
-    dataframe.index = pd.MultiIndex.from_tuples(fixed_values, names=dataframe.index.names)
-    return dataframe
+        df = df.copy()
+    df.index = pd.MultiIndex.from_tuples(fixed_values, names=df.index.names)
+    return df
 
 
 def load_data_frames(feature_folder,
@@ -399,7 +396,7 @@ def load_preictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
                                   sliding_frames=sliding_frames,
                                   **kwargs)
     preictal['Preictal'] = 1
-    preictal.sortlevel('segment', inplace=True)
+    preictal.sort_index('segment', inplace=True)
     if isinstance(preictal.columns, pd.MultiIndex):
         preictal.sortlevel(axis=1, inplace=True)
     return preictal
@@ -419,7 +416,7 @@ def load_interictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
                                     sliding_frames=sliding_frames,
                                     **kwargs)
     interictal['Preictal'] = 0
-    interictal.sortlevel('segment', inplace=True)
+    interictal.sort_index('segment', inplace=True)
     if isinstance(interictal.columns, pd.MultiIndex):
         interictal.sortlevel(axis=1, inplace=True)
     return interictal
@@ -438,7 +435,7 @@ def load_test_dataframes(feature_folder, **kwargs):
                               # Never use sliding frames for the test-data
                               sliding_frames=False,
                               **kwargs)
-    test.sortlevel('segment', inplace=True)
+    test.sort_index('segment', inplace=True)
     if isinstance(test.columns, pd.MultiIndex):
         test.sortlevel(axis=1, inplace=True)
     return test
@@ -447,7 +444,7 @@ def load_test_dataframes(feature_folder, **kwargs):
 def load_feature_files(feature_folder,
                        class_name,
                        load_function=None,
-                       find_features_function=file_utils.find_grouped_feature_files,
+                       find_features_function=fu.find_grouped_feature_files,
                        rebuild_data=False,
                        frame_length=12,
                        sliding_frames=False,
@@ -473,11 +470,10 @@ def load_feature_files(feature_folder,
     :return: A pandas dataframe where all the features loaded from feature folder with the given class are
              concatenated. The index will have a level called 'segment' with the segment name for the feature frames.
     """
-    cache_file_basename = file_utils.generate_filename('cache',
-                                                      '.pickle',
-                                                       [class_name,
-                                                       'frame_length_{}'.format(frame_length)],
-                                                       dict(sliding_frames=sliding_frames))
+    cache_file_basename = fu.generate_filename('cache',
+                                               '.pickle',
+                                               [class_name, 'frame_length_{}'.format(frame_length)],
+                                               dict(sliding_frames=sliding_frames))
     if output_folder is None:
         output_folder = feature_folder
 
@@ -544,11 +540,9 @@ def rebuild_features(feature_file_dicts,
                                            frame_length=frame_length,
                                            sliding_frames=sliding_frames)
 
-    complete_frame = pd.concat(segment_frames,
-                               names=('segment', 'frame'),
-                               keys=segment_names)
+    complete_frame = pd.DataFrame(pd.concat(segment_frames, names=('segment', 'frame'), keys=segment_names))
 
-    complete_frame.sortlevel('segment', inplace=True)
+    complete_frame.sort_index('segment', inplace=True)
     if np.count_nonzero(np.isnan(complete_frame)) != 0:
         logging.warning("NaN values found, using interpolation")
         complete_frame = complete_frame.interpolate(method='linear')

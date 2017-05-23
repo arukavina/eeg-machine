@@ -10,19 +10,16 @@ Author:    Andrei Rukavina <arukavina@analyticar.com>
 # Future
 from __future__ import absolute_import
 from __future__ import print_function
-# from __future__ import division
 
-# Generics
-import json
-import os.path
 import datetime
 import logging
 
-# Own
 import src
-from src.features import hills_features, wavelets, cross_correlate
 from src.classification import classification_pipeline
-from src.util import log_utils
+from src.features import hills_features, wavelets, cross_correlate
+from src.util import log_utils as lu
+from src.util import settings_util as su
+from src.util import file_utils as fu
 
 
 def extract_features(settings):
@@ -39,29 +36,48 @@ def extract_features(settings):
     workers = settings['WORKERS']
     window_size = settings['FEATURE_SETTINGS']['WINDOW_LENGTH']
     frame_length = settings['FEATURE_SETTINGS']['FEATURE_WINDOWS']
-    segment_paths = settings['TRAIN_DATA_PATH']
+    train_segment_paths = settings['TRAIN_DATA_PATH']
 
     eeg_logger = logging.getLogger(src.get_logger_name())
     eeg_logger.info("Starting extract_features with the following arguments: {}".format(settings))
 
+
+    fh_args_dict = dict([
+        ('train_path', settings['TRAIN_DATA_PATH']),
+        ('test_path', settings['TEST_DATA_PATH']),
+        ('cat_column', settings['CAT_COLUMN']),
+        ('class_labels', settings['CLASS_LABELS']),
+        ('logger', eeg_logger)
+    ])
+
+    try:
+        fh = fu.FileHelper(**fh_args_dict)
+    except AttributeError:
+        raise AttributeError('Attribute error when trying to instantiate class. Check __init__ or __doc__')
+    except Exception as e:
+        raise AttributeError('Something else is really wrong: {}'.format(e))
+
     if settings['FEATURE_TYPE'] == 'hills':
-        hills_features.extract_features(segment_paths=segment_paths,
+        hills_features.extract_features(segment_paths=train_segment_paths,
                                         output_dir=output_dir,
                                         workers=workers,
                                         window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                                        file_handler=fh,
                                         feature_length_seconds=window_size*frame_length)
 
     elif settings['FEATURE_TYPE'] == 'xcorr':
-        cross_correlate.extract_features(segment_paths=segment_paths,
+        cross_correlate.extract_features(segment_paths=train_segment_paths,
                                          output_dir=output_dir,
                                          workers=workers,
-                                         window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'])
+                                         window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                                         file_handler=fh)
 
     elif settings['FEATURE_TYPE'] == 'wavelets':
-        wavelets.extract_features(segment_paths=segment_paths,
+        wavelets.extract_features(segment_paths=train_segment_paths,
                                   output_dir=output_dir,
                                   workers=workers,
                                   window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                                  file_handler=fh,
                                   feature_length_seconds=window_size*frame_length)
 
 
@@ -83,7 +99,6 @@ def train_model(settings):
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
 
     eeg_logger = logging.getLogger(src.get_logger_name())
-
     eeg_logger.info("Starting training with the following arguments: {}".format(settings))
 
     classification_pipeline.run_batch_classification(feature_folders=[settings['FEATURE_PATH']],
@@ -99,45 +114,18 @@ def train_model(settings):
                                                      model_params={'C': 500, 'gamma': 0})
 
 
-def fix_settings(settings, root_dir):
-    """
-    Goes through the settings dictionary and makes sure the paths are correct.
-    :param settings: A dictionary with settings, usually obtained from SETTINGS.json in the root directory.
-    :param root_dir: The root path to which any path should be relative.
-    :return: A settings dictionary where all the paths are fixed to be relative to the supplied root directory.
-    """
-    fixed_settings = dict()
-    for key, setting in settings.items():
-        if 'path' in key.lower():
-            if isinstance(setting, str):
-                setting = os.path.join(root_dir, setting)
-            elif isinstance(setting, list):
-                setting = [os.path.join(root_dir, path) for path in setting]
-        fixed_settings[key] = setting
-    return fixed_settings
-
-
-def get_settings(settings_path):
-    """
-    Reads the given json settings file and makes sure the path in it are correct.
-    :param settings_path: The path to the json file holding the settings.
-    :return: A dictionary with settings.
-    """
-    with open(settings_path) as settings_fp:
-        settings = json.load(settings_fp)
-    root_dir = os.path.dirname(settings_path)
-    fixed_settings = fix_settings(settings, root_dir)
-    return fixed_settings
-
-
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Extracts features and trains model")
     parser.add_argument("settings", help="Path to the SETTINGS.json to use for the training")
 
-    args = r'SETTINGS.json'  # parser.parse_args()
-    settings = get_settings(args)
+    args = vars(parser.parse_args())
+    if args is None:
+        print("Using default root SETTINGS.json location")
+        args = r'SETTINGS.json'
+
+    settings = su.get_settings(args['settings'])
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
 
@@ -147,13 +135,13 @@ def main():
     optional_file_components = {'standardized': True}
 
     # Setup logging stuff, this removes 'log_dir' from the dictionary
-    log_utils.setup_logging(src.get_logger_name(), timestamp, file_components, optional_file_components, settings)
+    lu.setup_logging(src.get_logger_name(), timestamp, file_components, optional_file_components, settings)
     eeg_logger = logging.getLogger(src.get_logger_name())
 
     eeg_logger.info("Extracting Features")
     extract_features(settings)
-    eeg_logger.info("Training model")
 
+    eeg_logger.info("Training model")
     train_model(settings)
 
 
