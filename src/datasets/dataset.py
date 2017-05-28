@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 from sklearn import model_selection, preprocessing
 from sklearn.decomposition import PCA
+from sklearn.model_selection import StratifiedKFold
 
 # Own
 from src.util import file_utils as fu
@@ -55,8 +56,7 @@ class SegmentCrossValidator:
         self.segments.sort(inplace=True)
 
         if base_cv is None:
-            # self.cv = cross_validation.StratifiedKFold(self.segments, **cv_kwargs)
-            skf = model_selection.StratifiedKFold()
+            skf = StratifiedKFold()
             self.cv = skf.split(self.segments)
         else:
             self.cv = base_cv(self.segments, **cv_kwargs)
@@ -302,7 +302,7 @@ def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=F
                                    random_state=random_state)
     else:
         # Don't split by segment, but still do a stratified split
-        cv = cross_validation.StratifiedKFold(dataframe['Preictal'],
+        cv = StratifiedKFold(dataframe['Preictal'],
                                               n_folds=k,
                                               shuffle=shuffle,
                                               random_state=random_state)

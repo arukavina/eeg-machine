@@ -324,13 +324,12 @@ def run_classification(interictal_data,
                                              random_state=random_state,
                                              no_crossvalidation=no_crossvalidation)
         if model_file is None:
-            # Create a new filename based on the model method and the
-            # date
+            # Create a new filename based on the model method and the date
             if file_components is None:
                 model_basename = "model_{}_{}.pickle".format(method, timestamp)
             else:
                 model_basename = file_utils.generate_filename('model',
-                                                             '.pickle',
+                                                              '.pickle',
                                                               components=file_components,
                                                               optional_components=optional_file_components,
                                                               timestamp=timestamp)
@@ -341,17 +340,18 @@ def run_classification(interictal_data,
     # If we don't use cross-validation we shouldn't refit
     if do_refit and not no_crossvalidation:
         eeg_logger.info("Refitting model with held-out data.")
-        model = seizure_modeling.refit_model(interictal_data,
-                                             preictal_data,
-                                             model)
+        model = seizure_modeling.refit_model(interictal_data, preictal_data, model)
 
     if csv_directory is None:
         csv_directory = subject_folder
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
+
     # TODO model might be referenced before assignment
+
     scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components,
                           optional_file_components=optional_file_components, timestamp=timestamp)
+
     eeg_logger.info("Finished with classification on folder {}".format(subject_folder))
 
     return scores
@@ -398,7 +398,7 @@ def get_latest_model(feature_folder, method, model_pattern="model*{method}*.pick
              for model_file in files]
     if times:
         _, latest_model = max(times)
-        print("Latest model is:", latest_model)
+        eeg_logger.info("Latest model is:", latest_model)
         with open(latest_model, 'rb') as fp:
             eeg_logger.info("Loading classifier from {}.".format(latest_model))
             model = pickle.load(fp, encoding='bytes')

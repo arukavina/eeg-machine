@@ -41,7 +41,6 @@ def extract_features(settings):
     eeg_logger = logging.getLogger(src.get_logger_name())
     eeg_logger.info("Starting extract_features with the following arguments: {}".format(settings))
 
-
     fh_args_dict = dict([
         ('train_path', settings['TRAIN_DATA_PATH']),
         ('test_path', settings['TEST_DATA_PATH']),
@@ -92,10 +91,6 @@ def train_model(settings):
     :return: None. The model will be pickled to a file in the corresponding subject feature folder. A submission file
              will be written to the folder given by 'SUBMISSION_PATH' in the settings dictionary.
     """
-    # classification_pipeline.train_models(feature_folders=[settings['FEATURE_PATH']],
-    #                                      feature_type=settings['FEATURE_TYPE'],
-    #                                      model_dir=settings['MODEL_PATH'],
-    #                                      processes=settings['WORKERS'])
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
 
     eeg_logger = logging.getLogger(src.get_logger_name())

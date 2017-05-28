@@ -38,7 +38,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
         get 10 frames. The length of the lists then depends on the window_size,
         number of channels and number of frequency bands we are examining.
     """
-    eeg_logger.dubug("Starting")
+    eeg_logger.info("Using extraction function: {}".format('extract_features_for_segment'))
 
     if transformation is None:
         transformation = FFT_TF_xcorr(1, 48, 400, 'usf')

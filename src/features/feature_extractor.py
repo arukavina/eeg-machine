@@ -8,7 +8,6 @@ import random
 import logging
 
 import src
-from src.util import file_utils as fu
 
 from ..datasets import segment as sg
 
@@ -112,7 +111,7 @@ def worker_function(segment_path, extractor_function, output_dir,
                     extractor_kwargs=None,
                     naming_function=None,
                     resample_frequency=None,
-                    file_handler = None):
+                    file_handler=None):
     """
     Worker function for the feature extractor. Reads the segment from *segment_path* and runs uses it as the first
     argument to *extractor_function*.

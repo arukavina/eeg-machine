@@ -5,12 +5,13 @@ import mne
 from . import feature_extractor
 from ..datasets import segment as sg
 
-mne.set_log_level(verbose='ERROR')
 from mne.time_frequency.tfr import cwt_morlet
 import random
 import sys
 import numpy as np
 from itertools import chain
+
+mne.set_log_level(verbose='ERROR')
 
 
 class EpochShim(object):
@@ -56,10 +57,8 @@ def epochs_from_segment(segment, window_size=5.0):
     raw = mne.io.RawArray(segment.get_data(), info)
 
     random_id = int(random.randrange(sys.maxsize))
-    events = make_fixed_length_events(raw, random_id,
-                                      window_duration=window_size)
-    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0,
-                        tmax=window_size)
+    events = make_fixed_length_events(raw, random_id, window_duration=window_size)
+    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size, add_eeg_ref=False)
 
     return epochs
 

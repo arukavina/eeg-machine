@@ -1,11 +1,18 @@
 # Original Author: Michael Hills, https://github.com/MichaelHills
 from __future__ import absolute_import
+
 import numpy as np
+import logging
+
 from scipy import signal
 from scipy.signal import resample, hann, filtfilt, iirfilter, lfilter, butter
+
 from sklearn import preprocessing
 
-# optional modules for trying out different transforms
+import src
+
+# Optional modules for trying out different transforms
+
 try:
     import pywt
 except ImportError:
@@ -15,6 +22,9 @@ try:
     from scikits.talkbox.features import mfcc
 except ImportError:
     pass
+
+
+eeg_logger = logging.getLogger(src.get_logger_name())
 
 
 # NOTE(mike): All transforms take in data of the shape (NUM_CHANNELS, NUM_FEATURES)
@@ -262,9 +272,14 @@ class UnitScale:
     """
     Scale across the last axis.
     """
-    def get_name(self):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_name():
         return 'unit-scale'
 
+    @staticmethod
     def apply(self, data):
         return preprocessing.scale(data, axis=data.ndim-1)
 
@@ -273,10 +288,15 @@ class UnitScaleFeat:
     """
     Scale across the first axis, i.e. scale each feature.
     """
-    def get_name(self):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_name():
         return 'unit-scale-feat'
 
-    def apply(self, data):
+    @staticmethod
+    def apply(data):
         return preprocessing.scale(data, axis=1)
 
 
@@ -284,10 +304,15 @@ class CorrelationMatrix:
     """
     Calculate correlation coefficients matrix across all EEG channels.
     """
-    def get_name(self):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_name():
         return 'corr-mat'
 
-    def apply(self, data):
+    @staticmethod
+    def apply(data):
         return np.corrcoef(data)
 
 
@@ -296,10 +321,15 @@ class Eigenvalues:
     Take eigenvalues of a matrix, and sort them by magnitude in order to
     make them useful as features (as they have no inherent order).
     """
-    def get_name(self):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_name():
         return 'eigenvalues'
 
-    def apply(self, data):
+    @staticmethod
+    def apply( data):
         w, v = np.linalg.eig(data)
         w = np.absolute(w)
         w.sort()
@@ -433,6 +463,8 @@ class FreqCorrelation:
         assert scale_option in ('us', 'usf', 'none')
         assert with_corr or with_eigen
 
+        eeg_logger.debug(self.get_name())
+
     def get_name(self):
         selections = []
         if not self.with_corr:
@@ -467,10 +499,12 @@ class FreqCorrelation:
         if self.with_corr:
             data2 = upper_right_triangle(data2)
             out.append(data2)
+
         if self.with_eigen:
             out.append(w)
+
         if self.with_fft:
-            data1 = data1.ravel()
+            data1 = data1.ravel()  # Return the flattened underlying data as an ndarray
             out.append(data1)
         for d in out:
             assert d.ndim == 1
@@ -497,6 +531,8 @@ class TimeCorrelation:
         assert scale_option in ('us', 'usf', 'none')
         assert with_corr or with_eigen
 
+        eeg_logger.debug(self.get_name())
+
     def get_name(self):
         selections = []
         if not self.with_corr:
@@ -510,7 +546,9 @@ class TimeCorrelation:
         return 'time-correlation-r%d-%s%s' % (self.max_hz, self.scale_option, selection_str)
 
     def apply(self, data):
-        # so that correlation matrix calculation doesn't crash
+
+        # So that correlation matrix calculation doesn't crash
+
         for ch in data:
             if np.alltrue(ch == 0.0):
                 ch[-1] += 0.00001
@@ -520,6 +558,8 @@ class TimeCorrelation:
         # if data1.shape[1] > self.max_hz:
         #     data1 = Resample(self.max_hz).apply(data1)
 
+        eeg_logger.debug("Scaling option: {}".format(self.scale_option))
+
         if self.scale_option == 'usf':
             data1 = UnitScaleFeat().apply(data1)
         elif self.scale_option == 'us':
@@ -527,13 +567,19 @@ class TimeCorrelation:
 
         data1 = CorrelationMatrix().apply(data1)
 
+        eeg_logger.debug("Using Eigen Values: {}".format(self.with_eigen))
+
         if self.with_eigen:
             w = Eigenvalues().apply(data1)
 
         out = []
+
+        eeg_logger.debug("With Corr: {}".format(self.with_corr))
+
         if self.with_corr:
             data1 = upper_right_triangle(data1)
             out.append(data1)
+
         if self.with_eigen:
             out.append(w)
 

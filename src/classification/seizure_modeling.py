@@ -13,7 +13,7 @@ import sklearn.linear_model
 import sklearn.metrics
 import sklearn.svm
 from sklearn import model_selection
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import (GridSearchCV, StratifiedKFold)
 
 from ..datasets import dataset
 
@@ -135,7 +135,7 @@ def get_cv_generator(training_data, do_segment_split=True, random_state=None):
     if do_segment_split:
         cv = dataset.SegmentCrossValidator(training_data, model_selection.StratifiedKFold, **k_fold_kwargs)
     else:
-        cv = sklearn.cross_validation.StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
+        cv = StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
     return cv
 
 
@@ -184,12 +184,14 @@ def train_model(interictal,
                                                                  training_ratio=training_ratio,
                                                                  do_segment_split=do_segment_split,
                                                                  random_state=random_state)
-        logging.info("Shapes after splitting experiment data:")
-        logging.info("training_data: {}".format(training_data.shape))
-        logging.info("test_data: {}".format(test_data.shape))
-
         test_data_x = test_data.drop('Preictal', axis=1)
         test_data_y = test_data['Preictal']
+
+        logging.info("Shapes after splitting experiment data:")
+        logging.info("training_data: {}".format(test_data_x.shape))
+        logging.info(test_data_x.head(10))
+        logging.info("test_data_y: {}".format(test_data_y.shape))
+        logging.info(test_data_y.head(10))
 
         clf = select_model(training_data, method=method,
                            do_segment_split=do_segment_split,
