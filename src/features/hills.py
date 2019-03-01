@@ -139,11 +139,11 @@ if __name__ == '__main__':
                         default=60.0)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.",
                         type=int, default=1)
-    parser.add_argument("--resample-frequency", help="The frequency to resample to,",
+    parser.add_argument("--resample-frequency", help="The frequency to resample to.",
                         type=float,
                         dest='resample_frequency')
     parser.add_argument("--normalize-signal",
-                        help="Setting this flag will normalize the channels based on the subject median and MAD",
+                        help="Setting this flag will normalize the channels based on the subject median and MAD.",
                         default=False,
                         action='store_true',
                         dest='normalize_signal')
