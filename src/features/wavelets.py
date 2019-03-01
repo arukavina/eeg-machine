@@ -5,7 +5,6 @@ import mne
 from . import feature_extractor
 from ..datasets import segment as sg
 
-from mne.time_frequency.tfr import cwt_morlet
 import random
 import sys
 import numpy as np
@@ -38,7 +37,7 @@ def epochs_from_segment(segment, window_size=5.0):
 
     assert isinstance(segment, sg.Segment) or isinstance(segment, sg.DFSegment)
 
-    ch_names = segment.get_channels().tolist()
+    ch_names = segment.get_channels()  # .tolist()
     ch_types = ['eeg' for _ in range(len(ch_names))]
     sample_rate = segment.get_sampling_frequency()
 
@@ -56,9 +55,12 @@ def epochs_from_segment(segment, window_size=5.0):
 
     raw = mne.io.RawArray(segment.get_data(), info)
 
+    raw.set_eeg_reference('average', projection=True)  # set EEG average reference
+    raw.plot(block=True, title=segment.get_filename())
+
     random_id = int(random.randrange(sys.maxsize))
     events = make_fixed_length_events(raw, random_id, window_duration=window_size)
-    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size, add_eeg_ref=False)
+    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size)  # , add_eeg_ref=False)
 
     return epochs
 
@@ -211,8 +213,13 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
     tf_decompositions = []
     for epoch in epochs:
         # Calculate the Wavelet transform for all freqs in the range
-        tfd = cwt_morlet(epoch, epochs.info['sfreq'],
-                         freqs, use_fft=True, n_cycles=2)
+        tfd = mne.time_frequency.tfr_morlet(epoch,
+                                            epochs.info['sfreq'],
+                                            freqs,
+                                            use_fft=True,
+                                            return_itc=True,
+                                            n_cycles=2)
+        print("TFD: " + tfd)
         n_channels, n_frequencies, n_samples = tfd.shape
 
         # Calculate the phase synchrony for all frequencies in the range

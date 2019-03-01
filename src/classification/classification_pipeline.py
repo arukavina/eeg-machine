@@ -12,6 +12,7 @@ import numpy as np
 
 import src
 from src.util import file_utils
+from src.util.file_utils import FileHelper
 from . import submissions, seizure_modeling
 from ..datasets import dataset, features_combined, correlation_convertion, wavelet_classification
 
@@ -22,7 +23,7 @@ def run_batch_classification(feature_folders,
                              timestamp,
                              file_components=None,
                              optional_file_components=None,
-                             submission_file=None,
+                             scores_file=None,
                              frame_length=1,
                              sliding_frames=False,
                              rebuild_data=False,
@@ -47,7 +48,7 @@ def run_batch_classification(feature_folders,
                             the classification.
     :param optional_file_components: A dictionary of strings to booleans of filename parts which should be included only
                                      if the value is True.
-    :param submission_file: If this argument is a path, the classification scores will be written to a csv file with
+    :param scores_file: If this argument is a path, the classification scores will be written to a csv file with
     that path.
     :param frame_length: The length of each frame, in number of windows
     :param sliding_frames: If True, sliding windows will be used
@@ -88,8 +89,8 @@ def run_batch_classification(feature_folders,
         score_dict = segment_scores.to_dict()['Preictal']
         all_scores.append(score_dict)
 
-    if submission_file is None or os.path.isdir(submission_file):
-        # We need to generate a new submission filename
+    if scores_file is None or os.path.isdir(scores_file):
+        # We need to generate a new score filename
         if file_components is None:
             file_components = [feature_type,
                                kwargs['method'],
@@ -99,20 +100,20 @@ def run_batch_classification(feature_folders,
                                             sliding_frames=sliding_frames)
 
         filename = file_utils.generate_filename('submission',
-                                               '.csv',
+                                                '.csv',
                                                 file_components,
                                                 optional_file_components,
                                                 timestamp=timestamp)
         # Let the submission path take precedence if it's a folder
-        if submission_file is not None:
-            submission_file = os.path.join(submission_file, filename)
+        if scores_file is not None:
+            scores_file = os.path.join(scores_file, filename)
         elif csv_directory is not None:
-            submission_file = os.path.join(csv_directory, filename)
+            scores_file = os.path.join(csv_directory, filename)
         else:
-            submission_file = os.path.join('..', '..', 'submissions', filename)
+            scores_file = os.path.join('..', '..', 'submissions', filename)
 
-    eeg_logger.info("Saving submission scores to {}".format(submission_file))
-    with open(submission_file, 'w') as fp:
+    eeg_logger.info("Saving scores to {}".format(scores_file))
+    with open(scores_file, 'w') as fp:
         submissions.write_scores(all_scores, output=fp, do_normalize=True)
 
 
@@ -153,7 +154,7 @@ def load_features(feature_folders,
     the keys 'subject_folder', 'interictal_data', 'preictal_data' and 'unlabeled_data'.
     """
 
-    feature_folders = sorted(file_utils.expand_folders(feature_folders))
+    feature_folders = sorted(FileHelper.expand_folders(feature_folders))
 
     if feature_type in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
         if feature_type == 'wavelets' or feature_type == 'hills':
@@ -179,7 +180,7 @@ def load_features(feature_folders,
                        subject_folder=feature_folder)
 
     elif feature_type == 'combined':
-        combined_folders = file_utils.group_folders(feature_folders)
+        combined_folders = FileHelper.group_folders(feature_folders)
         for subject, combo_folders in combined_folders.items():
             # We create an output folder which is based on the subject name
             subject_folder = os.path.join('..', '..', 'data', 'combined', subject)
@@ -305,6 +306,7 @@ def run_classification(interictal_data,
     """
     eeg_logger.info("Running classification on folder {}".format(subject_folder))
 
+    model = None
     if model_file is None and not rebuild_model:
         model = get_latest_model(subject_folder, method)
         if model is None:
@@ -346,8 +348,6 @@ def run_classification(interictal_data,
         csv_directory = subject_folder
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
-
-    # TODO model might be referenced before assignment
 
     scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components,
                           optional_file_components=optional_file_components, timestamp=timestamp)
@@ -542,7 +542,7 @@ def get_cli_args():
     parser.add_argument("--model-params", "--p",
                         help=("Allows setting model parameters for the method"
                               " used. This should be a string with a sics_seizure_prediction"
-                              " expression containing a datastructure similar"
+                              " expression containing a similar data structure"
                               " to the grid_param argument to the cross "
                               "validation grid search, but the values doesn't have to be sequences. ",
                               "It will be used instead of the default grid_params."),
@@ -551,7 +551,7 @@ def get_cli_args():
                         help=("Give a start seed for random stuff. Ensures repeatability between runs. "
                               "If set to 'None', The random functions won't be seeded (using default initialization)"),
                         dest='random_state',
-                        default='32616')
+                        default='2806')
     args_dict = vars(parser.parse_args())
 
     # Since we use 'None' to turn of constant seeding, we use eval here instead of just parsing the argument as an int

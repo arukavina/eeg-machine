@@ -100,7 +100,7 @@ class Slice:
     def apply(self, data):
         s = [slice(None), ] * data.ndim
         s[-1] = slice(self.start, self.end)
-        return data[s]
+        return data[tuple(s)]
 
 
 class LPF:
@@ -346,6 +346,7 @@ def upper_right_triangle(matrix):
     return np.array(accum)
 
 
+# Not used...
 class OverlappingFFTDeltas:
     """
     Calculate overlapping FFT windows. The time window will be split up into num_parts,
@@ -398,7 +399,7 @@ class OverlappingFFTDeltas:
 
         return np.concatenate(diffs, axis=axis)
 
-
+# Not used...
 class FFTWithOverlappingFFTDeltas:
     """
     As above but appends the whole FFT to the overlapping data.

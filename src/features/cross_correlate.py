@@ -152,7 +152,7 @@ def maximum_crosscorrelation(x, y, time_delta_range, all_time_deltas=False):
                              function but the upper bound is included.
                              For example (-20, 20, 5) will calculate the time lags at [-20, -15, -10, -5, 0, 5, 10, 15].
     :param all_time_deltas: If True, all correlation values will be kept and returned during calculations. If False
-                            only the time lag with the maximal correlation is kept.
+                            obnly the time lag with the maximal correlation is kept.
     :return: A list of (time_lag, correlation) pairs. If all_time_deltas is False, only the maximal correlation pair is
              kept.
     """
@@ -275,7 +275,9 @@ def extract_features(segment_paths,
                      segment_end=None,
                      all_time_deltas=False,
                      old_csv_format=False):
+
     time_delta_config = setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config)
+
     feature_extractor.extract(feature_folder=segment_paths,
                               extractor_function=calculate_cross_correlations,
                               # Arguments for feature_extractor.extract

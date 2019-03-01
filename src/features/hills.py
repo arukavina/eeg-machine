@@ -1,17 +1,15 @@
 from __future__ import absolute_import
 
+# Generic
 import logging
-import mne
-
 import sys
+
+# Libs
+import mne
 from itertools import chain
 
+# Own
 import src
-
-from itertools import chain
-
-import src
-
 from src.features import feature_extractor
 from src.features import wavelets
 from src.features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
@@ -56,6 +54,8 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
     for epoch in epochs:
         feature_list.append(transformation.apply(epoch).tolist())
 
+    # eeg_logger.info("Epochs: {} of {} features each: ".format(len(feature_list), len(feature_list[0])))
+
     feature_dict = {}
     # Slice the features to frames
     for i in range(iters):
@@ -65,6 +65,10 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
     if len(feature_dict) != iters:
         sys.stderr.write("WARNING: Wrong number of features created, expected"
                          " %d, got %d instead." % (iters, len(feature_dict)))
+
+    for index, feature in sorted(feature_dict.items()):
+        eeg_logger.info("Features per Iter: {}".format(len(feature)))
+        break
 
     return feature_dict
 
@@ -84,6 +88,7 @@ def extract_features(segment_paths,
                      old_segment_format=True,
                      resample_frequency=None,
                      normalize_signal=False,
+                     stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                      only_missing_files=True,
                      file_handler=None,
                      feature_length_seconds=60,
@@ -97,6 +102,7 @@ def extract_features(segment_paths,
     :param sample_size:
     :param old_segment_format:
     :param resample_frequency:
+    :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param normalize_signal:
     :param only_missing_files:
     :param file_handler: fh instance
@@ -104,7 +110,7 @@ def extract_features(segment_paths,
     :param window_size:
     :return:
     """
-    eeg_logger.debug("Starting")
+    eeg_logger.info("Starting Hills Extractor")
 
     feature_extractor.extract(segment_paths,
                               extract_features_for_segment,
@@ -114,6 +120,7 @@ def extract_features(segment_paths,
                               sample_size=sample_size,
                               old_segment_format=old_segment_format,
                               resample_frequency=resample_frequency,
+                              stats_directory=stats_directory,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
                               file_handler=file_handler,
@@ -121,38 +128,3 @@ def extract_features(segment_paths,
                               feature_length_seconds=feature_length_seconds,
                               window_size=window_size)
 
-
-if __name__ == '__main__':
-    eeg_logger.dubug("Starting")
-
-    import argparse
-    parser = argparse.ArgumentParser(description="Calculates features according to Mike Hills winning submission.")
-
-    parser.add_argument("segments", help="The files to process. This can either be the path to a matlab file holding"
-                                         " the segment or a directory holding such files.", nargs='+',
-                        metavar="SEGMENT_FILE")
-    parser.add_argument("--csv-directory", help="Directory to write the csv files to, if omitted, the files will be"
-                                                " written to the same directory as the segment")
-    parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
-    parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by "
-                                                 "concatenating the phase lock values from the windows.", type=float,
-                        default=60.0)
-    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.",
-                        type=int, default=1)
-    parser.add_argument("--resample-frequency", help="The frequency to resample to.",
-                        type=float,
-                        dest='resample_frequency')
-    parser.add_argument("--normalize-signal",
-                        help="Setting this flag will normalize the channels based on the subject median and MAD.",
-                        default=False,
-                        action='store_true',
-                        dest='normalize_signal')
-    args = parser.parse_args()
-
-    extract_features(args.segments,
-                     args.csv_directory,
-                     workers=args.workers,
-                     resample_frequency=args.resample_frequency,
-                     normalize_signal=args.normalize_signal,
-                     feature_length_seconds=args.feature_length,
-                     window_size=args.window_size)
