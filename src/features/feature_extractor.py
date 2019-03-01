@@ -19,6 +19,7 @@ def extract(feature_folder,
             output_dir=None,
             old_segment_format=True,
             normalize_signal=False,
+            stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
             workers=1,
             naming_function=None,
             sample_size=None,
@@ -36,7 +37,8 @@ def extract(feature_folder,
                                argument.
     :param output_dir: The directory the features will be written to. Will be created if it doesn't exist.
     :param old_segment_format: Should the segment object be loaded with the old segment format.
-    :param normalize_signal:
+    :param normalize_signal: Whether to normalize the signal before performing the feature extraction
+    :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param workers: The numbers of processes to use for extracting features in parallel.
     :param naming_function: A function to use for generating the name of the feature file, should accept the two
                             positional arguments segment_path and output_dir, as well as the keyword arguments accepted
@@ -51,7 +53,7 @@ def extract(feature_folder,
     :param file_handler: instance of gh to create files correctly.
     :return: None. The feature csv files are created by this function.
     """
-    eeg_logger.debug("Starting")
+    eeg_logger.info("Starting Feature Extraction")
 
     segments = [segment_path
                 for segment_path
@@ -60,8 +62,9 @@ def extract(feature_folder,
 
     if only_missing_files:
         processed_features = set()
-        for dirpath, dirnames, filenames in os.walk(output_dir):
-            processed_features.update([os.path.join(dirpath, filename) for filename in filenames if '.csv' in filename])
+        for dir_path, dir_names, file_names in os.walk(output_dir):
+            processed_features.update([os.path.join(dir_path, file_name) for file_name in file_names if '.csv' in
+                                       file_name])
 
         unprocessed_segments = []
         for segment in segments:
@@ -87,9 +90,11 @@ def extract(feature_folder,
                                            output_dir=output_dir,
                                            old_segment_format=old_segment_format,
                                            normalize_signal=normalize_signal,
+                                           stats_directory=stats_directory,
                                            extractor_kwargs=extractor_kwargs,
                                            naming_function=naming_function,
-                                           resample_frequency=resample_frequency))
+                                           resample_frequency=resample_frequency,
+                                           file_handler=file_handler))
         finally:
             pool.close()
             pool.join()
@@ -101,13 +106,17 @@ def extract(feature_folder,
                             output_dir=output_dir,
                             old_segment_format=old_segment_format,
                             normalize_signal=normalize_signal,
+                            stats_directory=stats_directory,
                             extractor_kwargs=extractor_kwargs,
                             naming_function=naming_function,
-                            resample_frequency=resample_frequency)
+                            resample_frequency=resample_frequency,
+                            file_handler=file_handler)
 
 
 def worker_function(segment_path, extractor_function, output_dir,
-                    old_segment_format=False, normalize_signal=False,
+                    old_segment_format=False,
+                    normalize_signal=False,
+                    stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                     extractor_kwargs=None,
                     naming_function=None,
                     resample_frequency=None,
@@ -122,6 +131,7 @@ def worker_function(segment_path, extractor_function, output_dir,
     :param old_segment_format: Toggles which class should be used to represent the segment. If True, a segment.Segment
     object is used, otherwise a segment.DFSegment object is used.
     :param normalize_signal: Whether to normalize the signal before performing the feature extraction
+    :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param extractor_kwargs: A dictionary of keyword arguments which will be sent to the extractor function as well as
     the naming function.
     :param naming_function: A function to use for generating the file name for this feature. It should accept a segment
@@ -141,13 +151,15 @@ def worker_function(segment_path, extractor_function, output_dir,
         output_dir = os.path.dirname(segment_path)
 
     segment = sg.load_segment(segment_path,
-                              old_segment_format=old_segment_format,
+                              matlab_segment_format=old_segment_format,
                               normalize_signal=normalize_signal,
+                              stats_directory=stats_directory,
                               resample_frequency=resample_frequency)
 
     features = extractor_function(segment, **extractor_kwargs)
-    write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function, file_handler)
-    eeg_logger.info("Segment {} completed".format(segment_path))
+    write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function,
+                   file_handler)
+    eeg_logger.info("Segment {} completed.".format(segment_path))
 
 
 def write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function=None,
@@ -183,6 +195,8 @@ def write_features(features, segment_path, extractor_function, output_dir, extra
             csv_writer.writeheader()
             csv_writer.writerows(features)
 
+    eeg_logger.info("Saved to {}.".format(csv_file_path))
+
 
 def default_naming_function(segment_path, output_dir, extractor_function, file_handler):
     """
@@ -190,7 +204,7 @@ def default_naming_function(segment_path, output_dir, extractor_function, file_h
     :param segment_path: The path to the segment being extracted
     :param output_dir: The directory where the resulting features will be written to.
     :param extractor_function: A function which accepts a segment object as its first positional argument.
-    ;param file_handler: fh instance
+    :param file_handler: fh instance
     :return: A String containing the name of the feature file to be extracted
     """
     if file_handler.get_subject(output_dir) is None:

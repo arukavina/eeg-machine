@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 
-from ..datasets import segment
+from src.datasets import segment
 
 try:
     plt.style.use('ggplot')
@@ -100,10 +100,13 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', metrics=None):
 
     class_results = defaultdict(list)
 
+    print("Folder: {}, Glob Suffix: {}".format(feature_folder, glob_suffix))
     for segment_class in ['preictal', 'interictal', 'test']:
         glob_pattern = "*{}*{}*".format(segment_class, glob_suffix)
         files = get_filenames(feature_folder, glob_pattern)
         transformed = defaultdict(dict)
+
+        print("Glob Pattern {}".format(glob_pattern))
 
         for f in files:
             print("Processing {}".format(f))
@@ -224,6 +227,8 @@ def read_stats(stat_file, metrics=None, use_cache=True):
         reshaped.sortlevel(axis=1)
         read_stats.cache[stat_file][metrics] = reshaped
         return reshaped
+
+
 read_stats.cache = defaultdict(dict)
 
 
@@ -276,6 +281,8 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     added_axis = aggregated_metric[:, np.newaxis]
     cache[id(stats_df)][(metric_name, aggregator)] = added_axis
     return added_axis
+
+
 get_subject_metric.cache = defaultdict(dict)
 
 
@@ -347,7 +354,7 @@ def read_subject_stats(stat_path):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="""Script for generating a bunch of statistics about the segments""")
+    parser = argparse.ArgumentParser(description="""Script for generating statistics about the segments""")
 
     parser.add_argument("feature_folder",
                         help="""The folder containing the features to be analyzed""")
@@ -357,11 +364,6 @@ def main():
                               "expressed here. "
                               "Be sure to encase the pattern in \" so it won't be expanded by the shell."),
                         dest='glob_suffix', default='*')
-    # parser.add_argument("--processes",
-    #                     help="How many processes should be used for parellelized work.",
-    #                     dest='processes',
-    #                     default=1,
-    #                     type=int)
     parser.add_argument("--csv-directory",
                         help="Which directory the statistics CSV file be written to.",
                         dest='csv_directory',
@@ -373,6 +375,7 @@ def main():
                         dest='subset')
     args = parser.parse_args()
 
+    print(args)
     calculate_statistics(args.feature_folder, args.csv_directory, args.glob_suffix, args.subset)
 
 

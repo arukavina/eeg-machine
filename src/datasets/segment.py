@@ -19,33 +19,42 @@ from src.util import file_utils
 eeg_logger = logging.getLogger(src.get_logger_name())
 
 
-def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
+def load_segment(segment_path,
+                 matlab_segment_format=True,
+                 normalize_signal=False,
+                 stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
+                 resample_frequency=None):
     """
     Convienience function for loading segments
     :param segment_path: Path to the segment file to load.
-    :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas
+    :param matlab_segment_format: If True, the matlab format will be used. If False, the format backed by a pandas
                                dataframe will be used.
     :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute
                              deviation.
+    :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
     :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
     """
-    eeg_logger.debug("Starting")
+    eeg_logger.info("Starting Load Segment")
 
     if normalize_signal:
-        return load_and_standardize(segment_path, old_segment_format=old_segment_format)
+        return load_and_standardize(segment_path,
+                                    stats_glob=stats_directory,
+                                    matlab_segment_format=matlab_segment_format)
     else:
-        if old_segment_format:
+        if matlab_segment_format:
+            eeg_logger.info("Using Matlab Segment format")
             segment = Segment(segment_path)
         else:
             segment = DFSegment.from_mat_file(segment_path)
+
         if resample_frequency is not None:
             segment.resample_frequency(resample_frequency, inplace=True)
         return segment
 
 
-def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics/*.csv',
-                         center_name='median', scale_name='mad', old_segment_format=True,
+def load_and_standardize(mat_filename, stats_glob='/Users/arukavina/Documents/EEG/Statistics/*.csv',
+                         center_name='median', scale_name='mad', matlab_segment_format=True,
                          k=10):
     """
     Loads the segment given by *mat_name* and returns a standardized version. The values for standardization (scaling
@@ -59,25 +68,25 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     Must correspond to a metric present in stats file.
     :param scale_name: The name of the metric to use as a scaling vector (one value for each channel).
     Must correspond to a metric present in stats file.
-    :param old_segment_format: If True, use the old segment format.
+    :param matlab_segment_format: If True, use the old segment format.
     :param k: For winsorizing this is the number of standard deviations the signal can be before it's clipped.
     :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose
     name contains the same subject as mat_filename
     """
-    from ..features import basic_segment_statistics
+    from src.features import basic_segment_statistics
 
-    subject = file_utils.get_subject(mat_filename)
+    subject = file_utils.FileHelper.get_subject(mat_filename)
     stats_files = [filename for filename
                    in glob.glob(stats_glob)
-                   if subject == file_utils.get_subject(filename)]
+                   if subject == file_utils.FileHelper.get_subject(filename)]
     if len(stats_files) != 1:
         raise ValueError("Can't determine which stats file to use"
-                         "with the glob {} and the subject {}".format(stats_glob, subject))
+                         " with the glob {} and the subject {}".format(stats_glob, subject))
     stats = basic_segment_statistics.read_stats(stats_files[0])
     center = basic_segment_statistics.get_subject_metric(stats, center_name)
     scale = basic_segment_statistics.get_subject_metric(stats, scale_name)
 
-    if old_segment_format:
+    if matlab_segment_format:
         segment = Segment(mat_filename)
     else:
         segment = DFSegment.from_mat_file(mat_filename)
@@ -100,12 +109,21 @@ class Segment:
                 raise ValueError("File {} does not contain a struct".format(mat_filename))
 
             self.filename = os.path.basename(mat_filename)
-            self.dirname = os.path.dirname(os.path.abspath(mat_filename))
+            self.dir_name = os.path.dirname(os.path.abspath(mat_filename))
             self.name = struct_name
 
             # The matlab struct contains the variable mappings, we're only interested in the variable *self.name*
             self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
             self.mat_struct.data = self.mat_struct.data.astype('float64')
+
+            eeg_logger.debug("Mat struct data example for struct: {} ({}):".format(self.name, self.filename))
+            eeg_logger.debug("Duration: {}".format(self.get_duration()))
+            eeg_logger.debug("Length Seconds: {}".format(self.get_length_sec()))
+            eeg_logger.debug("Samples: {}".format(self.get_n_samples()))
+            eeg_logger.debug("Sampling Frequency: {} Hz".format(self.get_sampling_frequency()))
+            eeg_logger.debug("Sequence: {}".format(self.get_sequence()))
+            eeg_logger.debug("Channel 0 data: {}".format(self.get_channel_data(0)))
+            eeg_logger.debug("Channels: {}".format(self.get_channels()))
 
         except ValueError as exception:
             eeg_logger.info("Error when loading {}".format(mat_filename))
@@ -117,11 +135,17 @@ class Segment:
     def get_filename(self):
         return self.filename
 
-    def get_dirname(self):
-        return self.dirname
+    def get_dir_name(self):
+        return self.dir_name
 
     def get_channels(self):
-        return self.mat_struct.channels
+
+        # Due to wavelets.py:45: RuntimeWarning: 16 channel names are too long, have been truncated to 15 characters.
+        # I'll be taking the last 15 characters from the original channel name. Maybe hashing.
+        channels = []
+        for channel in self.mat_struct.channels:
+            channels.append(channel[-15:])
+        return channels  # self.mat_struct.channels
 
     def get_n_samples(self):
         """Returns the number of samples in this segment"""
@@ -193,7 +217,7 @@ class Segment:
             raise ValueError("Resample on Segment only supports inplace")
         data = self.mat_struct.data
         if method == 'resample':
-            eeg_logger.info("Using scipy.signal.resample")
+            eeg_logger.info("Using scipy.signal.resample with new frequency of: {}".format(new_frequency))
             # Use scipy.signal.resample
             n_samples = int(self.get_n_samples() * new_frequency / self.mat_struct.sampling_frequency)
             resampled_signal = scipy.signal.resample(data, n_samples, axis=1, **method_kwargs)
@@ -269,6 +293,11 @@ class Segment:
         mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
         return mad / c
 
+    def raw_plot(self):
+        import matplotlib.pyplot as plt
+        plt.plot(self.get_channel_data(1), linestyle='', marker='x')
+        plt.show()
+
 
 class DFSegment(object):
     """
@@ -290,6 +319,8 @@ class DFSegment(object):
 
     def get_channels(self):
         return self.dataframe.columns
+
+    # TODO: cortar a 14
 
     def get_n_samples(self):
         """Returns the number of samples in this segment"""
@@ -439,6 +470,7 @@ class DFSegment(object):
         :return: A DFSegment object with the data from the segment file.
         """
         try:
+            # Return a list of variables inside a mat file.
             [(struct_name, shape, dtype)] = scipy.io.whosmat(mat_filename)
             if dtype != 'struct':
                 raise ValueError("File {} does not contain a struct".format(mat_filename))
@@ -448,6 +480,7 @@ class DFSegment(object):
             # The matlab struct contains the variable mappings, we're only interested in the variable *name*
             mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[struct_name]
             sampling_frequency = mat_struct.sampling_frequency
+
             try:
                 sequence = mat_struct.sequence
             except AttributeError:
@@ -458,10 +491,11 @@ class DFSegment(object):
             # Most operations we do on dataframes are optimized for float64
             dataframe = pd.DataFrame(data=mat_struct.data.transpose().astype('float64'), columns=mat_struct.channels,
                                      index=index)
+
             return cls(sampling_frequency, dataframe)
 
         except ValueError as exception:
-            eeg_logger.errpr("Error when loading {}".format(mat_filename))
+            eeg_logger.error("Error when loading {}".format(mat_filename))
             raise exception
 
     @classmethod
@@ -505,7 +539,3 @@ def example_preictal():
 
 def example_interictal():
     return Segment('/Users/arukavina/Documents/EEG/Dog_1/Dog_1_interictal_segment_0001.mat')
-
-
-if __name__ == '__main__':
-    example = load_and_standardize('/Users/arukavina/Documents/EEG/Dog_1/Dog_1_preictal_segment_0001.mat')
