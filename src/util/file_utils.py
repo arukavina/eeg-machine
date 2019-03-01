@@ -140,7 +140,8 @@ class FileHelper:
                 new_folders.append(folder)
         return new_folders
 
-    def group_folders(self, feature_folders):
+    @staticmethod
+    def group_folders(feature_folders):
         """
         Groups the feature folder per subject. Returns a dictionary with subject to
         feature folders lists. If the subject of any of the folders can't be found,
@@ -148,11 +149,10 @@ class FileHelper:
         :param feature_folders: The list of folders paths to group.
         :return: A dictionary of subject to folder list mappings.
         """
-        self.logger.debug("args: feature_folders: {}".format(feature_folders))
 
         grouped_folders = defaultdict(list)
         for feature_folder in feature_folders:
-            subject = self.get_subject(feature_folder)
+            subject = FileHelper.get_subject(feature_folder)
             if subject is not None:
                 grouped_folders[subject].append(feature_folder)
         return grouped_folders
@@ -177,7 +177,7 @@ class FileHelper:
         return subsample
 
     @staticmethod
-    def generate_testsegment_names(name_file=TEST_SEGMENT_NAMES_FILE):
+    def generate_test_segment_names(name_file=TEST_SEGMENT_NAMES_FILE):
         """
         Generates a json file containing all the canonical test file names. The file is saved to the path denoted by
         the module constant TESTSEGMENT_NAMES_FILE'
@@ -196,7 +196,7 @@ class FileHelper:
             json.dump(formatted_names, fp, indent=4, separators=(',', ': '))
         return set(formatted_names)
 
-    def load_testsegment_names(self, name_file=TEST_SEGMENT_NAMES_FILE):
+    def load_test_segment_names(self, name_file=TEST_SEGMENT_NAMES_FILE):
         """Loads the test segment names as a set of names.
         :param name_file: The file with names to load.
         :return: A set of test segment names. """
@@ -207,7 +207,7 @@ class FileHelper:
                 names = json.load(fp)
                 return set(names)
         except FileSystemException:
-            return self.generate_testsegment_names(name_file)
+            return self.generate_test_segment_names(name_file)
 
 
 def create_path(p):
@@ -229,6 +229,7 @@ def create_path(p):
                 os.makedirs(p)
             except OSError as e:
                 print('Can\'t create path {}: {}'.format(p, e))
+
 
 def generate_filename(prefix, suffix, components, optional_components=None, sep='-', timestamp=None):
     """
