@@ -55,8 +55,8 @@ def epochs_from_segment(segment, window_size=5.0):
 
     raw = mne.io.RawArray(segment.get_data(), info)
 
-    raw.set_eeg_reference('average', projection=True)  # set EEG average reference
-    raw.plot(block=True, title=segment.get_filename())
+    # raw.set_eeg_reference('average', projection=True)  # set EEG average reference
+    # raw.plot(block=True, title=segment.get_filename())
 
     random_id = int(random.randrange(sys.maxsize))
     events = make_fixed_length_events(raw, random_id, window_duration=window_size)
@@ -292,7 +292,7 @@ def extract_features(segment_paths,
                               output_dir=output_dir,
                               workers=workers,
                               sample_size=sample_size,
-                              old_segment_format=old_segment_format,
+                              matlab_segment_format=old_segment_format,
                               resample_frequency=resample_frequency,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,

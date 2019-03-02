@@ -54,7 +54,7 @@ def load_segment(segment_path,
 
 
 def load_and_standardize(mat_filename, stats_glob='/Users/arukavina/Documents/EEG/Statistics/*.csv',
-                         center_name='median', scale_name='mad', matlab_segment_format=True,
+                         center_name='median', scale_name='mean', matlab_segment_format=True,
                          k=10):
     """
     Loads the segment given by *mat_name* and returns a standardized version. The values for standardization (scaling
@@ -268,6 +268,11 @@ class Segment:
                       deviations) for the channels.
         :return: None. The scaling is done in-place.
         """
+
+        if scale.any() <= 0:
+            eeg_logger.error("Scale vector contains 0s, scaling is not possible. {}".format(scale))
+            raise ZeroDivisionError("0 or NAs found in Scale vector. Check statistics or change scale metric")
+
         self.mat_struct.data = self.mat_struct.data / scale
 
     def mean(self):

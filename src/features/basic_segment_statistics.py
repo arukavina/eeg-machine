@@ -224,7 +224,7 @@ def read_stats(stat_file, metrics=None, use_cache=True):
         if metrics is not None:
             stats_df = stats_df.loc[metrics]
         reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
-        reshaped.sortlevel(axis=1)
+        reshaped.sort_values(by='metric', axis=1)
         read_stats.cache[stat_file][metrics] = reshaped
         return reshaped
 
@@ -337,7 +337,7 @@ def read_stats_csv(stat_path):
     :return: A DataFrame with the given metric.
     """
     stats_df = pd.read_csv(stat_path, sep='\t', index_col=['metric', 'class', 'segment'])
-    stats_df.sortlevel('metric', inplace=True)
+    stats_df.sort_values('metric', inplace=True)
     return stats_df
 
 
