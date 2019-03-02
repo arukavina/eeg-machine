@@ -9,7 +9,8 @@ import logging
 
 import src
 
-from ..datasets import segment as sg
+from src.datasets import segment as sg
+from src.util import file_utils as fu
 
 eeg_logger = logging.getLogger(src.get_logger_name())
 
@@ -17,7 +18,7 @@ eeg_logger = logging.getLogger(src.get_logger_name())
 def extract(feature_folder,
             extractor_function,
             output_dir=None,
-            old_segment_format=True,
+            matlab_segment_format=True,
             normalize_signal=False,
             stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
             workers=1,
@@ -36,7 +37,7 @@ def extract(feature_folder,
     :param extractor_function: A function to extract the segment data. Should accept a segment object as its first
                                argument.
     :param output_dir: The directory the features will be written to. Will be created if it doesn't exist.
-    :param old_segment_format: Should the segment object be loaded with the old segment format.
+    :param matlab_segment_format: Should the segment object be loaded with the old segment format.
     :param normalize_signal: Whether to normalize the signal before performing the feature extraction
     :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param workers: The numbers of processes to use for extracting features in parallel.
@@ -81,30 +82,31 @@ def extract(feature_folder,
         segments = random.sample(segments, sample_size)
 
     if workers > 1:
-        pool = multiprocessing.Pool(workers)
-        try:
-            for segment in segments:
-                pool.apply_async(worker_function,
-                                 kwds=dict(segment_path=segment,
-                                           extractor_function=extractor_function,
-                                           output_dir=output_dir,
-                                           old_segment_format=old_segment_format,
+        pool = multiprocessing.Pool(processes=workers)
+
+        results = []
+
+        for segment in segments:
+
+            r = pool.apply_async(worker_function,
+                                 args=(segment, extractor_function, output_dir),
+                                 kwds=dict(matlab_segment_format=matlab_segment_format,
                                            normalize_signal=normalize_signal,
                                            stats_directory=stats_directory,
                                            extractor_kwargs=extractor_kwargs,
                                            naming_function=naming_function,
-                                           resample_frequency=resample_frequency,
-                                           file_handler=file_handler))
-        finally:
-            pool.close()
-            pool.join()
+                                           resample_frequency=resample_frequency))
+            results.append(r)
+
+        pool.close()
+        pool.join()
 
     else:
         for segment in segments:
             worker_function(segment_path=segment,
                             extractor_function=extractor_function,
                             output_dir=output_dir,
-                            old_segment_format=old_segment_format,
+                            matlab_segment_format=matlab_segment_format,
                             normalize_signal=normalize_signal,
                             stats_directory=stats_directory,
                             extractor_kwargs=extractor_kwargs,
@@ -113,8 +115,10 @@ def extract(feature_folder,
                             file_handler=file_handler)
 
 
-def worker_function(segment_path, extractor_function, output_dir,
-                    old_segment_format=False,
+def worker_function(segment_path,
+                    extractor_function,
+                    output_dir,
+                    matlab_segment_format=False,
                     normalize_signal=False,
                     stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                     extractor_kwargs=None,
@@ -128,7 +132,7 @@ def worker_function(segment_path, extractor_function, output_dir,
     :param segment_path: A path to the segment file to work on.
     :param extractor_function: A function which accepts a segment object as its first positional argument.
     :param output_dir: The directory where the resulting features will be written to.
-    :param old_segment_format: Toggles which class should be used to represent the segment. If True, a segment.Segment
+    :param matlab_segment_format: Toggles which class should be used to represent the segment. If True, a segment.Segment
     object is used, otherwise a segment.DFSegment object is used.
     :param normalize_signal: Whether to normalize the signal before performing the feature extraction
     :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
@@ -150,8 +154,18 @@ def worker_function(segment_path, extractor_function, output_dir,
     if output_dir is None:
         output_dir = os.path.dirname(segment_path)
 
+    if file_handler is None:
+        fh_args_dict = dict([
+            ('train_path', segment_path.split('/')[-1]),
+            ('test_path', ''),
+            ('cat_column', ''),
+            ('class_labels', ''),
+            ('logger', eeg_logger)
+        ])
+        file_handler = fu.FileHelper(**fh_args_dict)
+
     segment = sg.load_segment(segment_path,
-                              matlab_segment_format=old_segment_format,
+                              matlab_segment_format=matlab_segment_format,
                               normalize_signal=normalize_signal,
                               stats_directory=stats_directory,
                               resample_frequency=resample_frequency)
