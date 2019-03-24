@@ -53,7 +53,10 @@ def run_batch_classification(feature_folders,
     :param frame_length: The length of each frame, in number of windows
     :param sliding_frames: If True, sliding windows will be used
     :param rebuild_data: If True, the cache files will be rebuilt from the csv data.
-    :param feature_type: The name of the feature. Valid values are 'cross-correlation', 'hills' and 'wavelets'
+    :param feature_type: A string describing the type of features to use. If  'wavelets' is supplied, the feature files
+    will be loaded as wavelets. If 'cross-correlations' or 'xcorr' is supplied, the features will be loaded as
+    cross-correlation features. If 'combined' is supplied, the path of the feature folders will be used to determine
+    which features it contains, and the results will be combined column-wise into longer feature vectors.
     :param processes: The number of processes to use in the grid search
     :param csv_directory: Where to place the resulting classification files
     :param do_downsample: If true downsampling of the interictal features will be performed

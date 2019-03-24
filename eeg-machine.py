@@ -52,7 +52,7 @@ def extract_features(settings, fh):
                                file_handler=fh,
                                feature_length_seconds=window_size*frame_length)
 
-    elif settings['FEATURE_TYPE'] == 'xcorr':
+    elif settings['FEATURE_TYPE'] in ('xcorr', 'cross correlations'):
         cross_correlate.extract_features(segment_paths=train_segment_paths,
                                          output_dir=output_dir,
                                          workers=workers,
@@ -66,6 +66,27 @@ def extract_features(settings, fh):
                                   window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
                                   file_handler=fh,
                                   feature_length_seconds=window_size*frame_length)
+
+    elif settings['FEATURE_TYPE'] == 'combined':
+        hills.extract_features(segment_paths=train_segment_paths,
+                               output_dir=output_dir,
+                               workers=workers,
+                               window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                               file_handler=fh,
+                               feature_length_seconds=window_size * frame_length)
+
+        cross_correlate.extract_features(segment_paths=train_segment_paths,
+                                         output_dir=output_dir,
+                                         workers=workers,
+                                         window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                                         file_handler=fh)
+
+        wavelets.extract_features(segment_paths=train_segment_paths,
+                                  output_dir=output_dir,
+                                  workers=workers,
+                                  window_size=settings['FEATURE_SETTINGS']['WINDOW_LENGTH'],
+                                  file_handler=fh,
+                                  feature_length_seconds=window_size * frame_length)
 
 
 def train_model(settings, fh):
