@@ -25,7 +25,7 @@ def load_segment(segment_path,
                  stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                  resample_frequency=None):
     """
-    Convienience function for loading segments
+    Convenience function for loading segments
     :param segment_path: Path to the segment file to load.
     :param matlab_segment_format: If True, the matlab format will be used. If False, the format backed by a pandas
                                dataframe will be used.
@@ -266,7 +266,7 @@ class Segment:
         Center and scale the signal.
         :param scale: A (n_channels, 1) NDArray-like with scale-estimates (like standard deviation or median absolute
                       deviations) for the channels.
-        :return: None. The scaling is done in-place.
+        :return: None, the scaling is done in-place.
         """
 
         if scale.any() <= 0:
