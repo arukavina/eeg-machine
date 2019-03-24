@@ -1,16 +1,38 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Module for Extracting Wavelet features.
+Creates an SPLV [1] feature dictionary from a Segment object
+
+    [1] Le Van Quyen, Michel, et al. "Comparison of Hilbert transform and wavelet methods for the analysis of neuronal
+    synchrony." Journal of neuroscience methods 111.2 (2001): 83-98.
+
+GPL
+"""
+
+# Futures
 from __future__ import absolute_import
+from __future__ import print_function
 
-import mne
-
-from . import feature_extractor
-from ..datasets import segment as sg
-
-import random
+# Built-in/Generic Imports
+import logging
 import sys
+import random
+
+# Libs
+import mne
 import numpy as np
 from itertools import chain
 
-mne.set_log_level(verbose='ERROR')
+# Own modules
+import src
+
+from src.datasets import segment as sg
+from src.features import feature_extractor
+
+mne.set_log_level(verbose='WARNING')
+eeg_logger = logging.getLogger(src.get_logger_name())
 
 
 class EpochShim(object):
@@ -117,6 +139,8 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     depends on the window_size, number of channels and number of frequency bands we are examining.
     """
 
+    eeg_logger.info("Using extraction function: WAVELETS {}".format('extract_features_for_segment'))
+
     # Here we define how many windows we will have to concatenate
     # in order to create the features we want
     frames = int(feature_length_seconds / window_size)
@@ -142,16 +166,14 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
                 # fewer frames than the theoretical value in the final segment,
                 # so we need to guard against IndexError
                 except IndexError:
-                    # sys.stderr.write(("Out of index at index:%d offset:%d"
-                    #                  " i:%d\n") % (index, offset, i))
-                    # break or pass?
+                    eeg_logger.warn("Out of index at index:{} offset:{} i:{}".format(index, offset, i))
                     pass
         # Flatten the list of lists
         feature_dict[index] = list(chain.from_iterable(feature_list))
 
     if len(feature_dict) != iters:
-        sys.stderr.write("WARNING: Wrong number of features created, expected"
-                         " %d, got %d instead." % (iters, len(feature_dict)))
+        eeg_logger.warn("Wrong number of features created, expected {}, got {} instead.".format(iters,
+                                                                                                len(feature_dict)))
 
     return feature_dict
 
@@ -159,11 +181,12 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
 def eeg_rhythms():
     """
     Returns a dict of the EEG rhythm bands as described in
-    Mirowski, Piotr W., et al. "Comparing SVM and convolutional networks for epileptic sics_seizure_prediction prediction from
-    intracranial EEG." Machine Learning for Signal Processing, 2008. MLSP 2008. IEEE Workshop on. IEEE, 2008.
+    Mirowski, Piotr W., et al. "Comparing SVM and convolutional networks for epileptic sics_seizure_prediction
+    prediction from intracranial EEG." Machine Learning for Signal Processing, 2008. MLSP 2008. IEEE Workshop on.
+    IEEE, 2008.
     """
     return {"delta": (1, 4), "theta": (4, 7), "alpha": (7, 13),
-            "low-beta": (13, 15), "high-beta": (14, 30),
+            "low-beta": (13, 15), "high-beta": (15, 30),
             "low-gamma": (30, 45), "high-gamma": (65, 101)}
 
 
@@ -219,7 +242,7 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                                             use_fft=True,
                                             return_itc=True,
                                             n_cycles=2)
-        print("TFD: " + tfd)
+        eeg_logger.info("TFD: " + tfd)
         n_channels, n_frequencies, n_samples = tfd.shape
 
         # Calculate the phase synchrony for all frequencies in the range
@@ -241,15 +264,13 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                     phase_diff = np.absolute(angles.sum() / n_samples)
 
                     if (phase_diff > 1.0) or (phase_diff < 0.0):
-                        sys.stderr.write(("WARNING: Invalid phase difference: "
-                                          "%f\n") % phase_diff)
+                        eeg_logger.warn("Invalid phase difference: {}".format(phase_diff))
                     # Gather the values in an lower triangular matrix
                     freq_phase_diff[ch_i, ch_j] = phase_diff
 
             av_phase_sync += freq_phase_diff
 
-        # The synchrony is averaged over the synchronies in all frequencies
-        # in the band
+        # The synchrony is averaged over the synchronies in all frequencies in the band
         av_phase_sync /= n_frequencies
 
         tf_decompositions.append(av_phase_sync)
@@ -263,8 +284,9 @@ def extract_features(segment_paths,
                      sample_size=None,
                      old_segment_format=True,
                      resample_frequency=None,
-                     normalize_signal=False,
                      file_handler=None,
+                     normalize_signal=False,
+                     stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                      feature_length_seconds=60,
                      window_size=5,
                      no_epochs=False,
@@ -279,6 +301,7 @@ def extract_features(segment_paths,
     :param old_segment_format:
     :param resample_frequency:
     :param normalize_signal:
+    :param stats_directory:
     :param file_handler: fh instance
     :param feature_length_seconds:
     :param window_size:
@@ -286,18 +309,20 @@ def extract_features(segment_paths,
     :param only_missing_files:
     :return:
     """
+
     feature_extractor.extract(segment_paths,
                               extract_features_for_segment,
-                              ## Arguments for feature_extractor.extract
+                              # Arguments for feature_extractor.extract
                               output_dir=output_dir,
                               workers=workers,
                               sample_size=sample_size,
                               matlab_segment_format=old_segment_format,
                               resample_frequency=resample_frequency,
+                              stats_directory=stats_directory,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
                               file_handler=file_handler,
-                              ## Worker function kwargs:
+                              # Worker function kwargs:
                               feature_length_seconds=feature_length_seconds,
                               window_size=window_size,
                               no_epochs=no_epochs)

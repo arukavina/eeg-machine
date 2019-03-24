@@ -8,12 +8,17 @@ from __future__ import division
 import csv
 import os.path
 import re
+import logging
 from collections import defaultdict
 
 import numpy as np
 
+import src
 from src.util import file_utils
-from . import feature_extractor
+
+from src.features import feature_extractor
+
+eeg_logger = logging.getLogger(src.get_logger_name())
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
@@ -275,6 +280,32 @@ def extract_features(segment_paths,
                      segment_end=None,
                      all_time_deltas=False,
                      old_csv_format=False):
+    """
+    Calculates the cross-correlation between the channels in the given segments.
+    Saves the results to a csv file per segment file.
+
+    :param segment_paths: The folder in which the feature extraction will be performed. This should be a folder
+                          containing the .mat data files.
+    :param output_dir: The directory the features will be written to. Will be created if it doesn't exist.
+    :param workers: The numbers of processes to use for extracting features in parallel.
+    :param resample_frequency: If this is not None, the segments will be resampled to this frequency.
+    :param normalize_signal: Whether to normalize the signal before performing the feature extraction
+    :param window_size:
+    :param only_missing_files: If True, features will only be generated for files which are missing. Useful if you
+    :param file_handler: instance of gh to create files correctly.
+    :param time_delta_config:
+    :param time_delta_begin:
+    :param time_delta_end:
+    :param time_delta_step:
+    :param channels:
+    :param segment_start:
+    :param segment_end:
+    :param all_time_deltas:
+    :param old_csv_format:
+    :return: None
+    """
+
+    eeg_logger.info("Starting XCorrelations (XCrorr) extractor")
 
     time_delta_config = setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config)
 

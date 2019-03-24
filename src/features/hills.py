@@ -1,6 +1,17 @@
-from __future__ import absolute_import
+#!/bin/env python
+# -*- coding: utf-8 -*-
 
-# Generic
+"""
+Module for Extracting Hills features.
+Creates a feature dictionary from a Segment object, according to the provided transformation function.
+GPL
+"""
+
+# Futures
+from __future__ import absolute_import
+from __future__ import print_function
+
+# Built-in/Generic Imports
 import logging
 import sys
 
@@ -8,11 +19,13 @@ import sys
 import mne
 from itertools import chain
 
-# Own
+# Own modules
 import src
+
 from src.features import feature_extractor
 from src.features import wavelets
 from src.features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+
 
 mne.set_log_level(verbose='WARNING')
 eeg_logger = logging.getLogger(src.get_logger_name())
@@ -36,7 +49,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
         get 10 frames. The length of the lists then depends on the window_size,
         number of channels and number of frequency bands we are examining.
     """
-    eeg_logger.info("Using extraction function: {}".format('extract_features_for_segment'))
+    eeg_logger.info("Using extraction function: HILLS {}".format('extract_features_for_segment'))
 
     if transformation is None:
         transformation = FFT_TF_xcorr(1, 48, 400, 'usf')

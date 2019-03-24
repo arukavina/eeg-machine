@@ -54,6 +54,7 @@ def extract(feature_folder,
     :param file_handler: instance of gh to create files correctly.
     :return: None. The feature csv files are created by this function.
     """
+
     eeg_logger.info("Starting Feature Extraction")
 
     segments = [segment_path
