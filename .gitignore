@@ -16,4 +16,8 @@
 
 # Data folder is created automatically
 
+# Img files
+
+*.png
+
 /data/
