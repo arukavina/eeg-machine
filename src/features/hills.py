@@ -59,6 +59,8 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
     windows_in_frame = int(feature_length_seconds / window_size)
     iters = int(segment.get_duration() / feature_length_seconds)
 
+    segment.raw_plot(2)
+
     # Create Epochs object according to defined window size
     epochs = wavelets.epochs_from_segment(segment, window_size)
 
@@ -81,6 +83,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
 
     for index, feature in sorted(feature_dict.items()):
         eeg_logger.info("Features per Iter: {}".format(len(feature)))
+
         break
 
     return feature_dict

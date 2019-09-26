@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 """
 Module for loading and manipulating  EEG segments.
 """
@@ -121,7 +124,7 @@ class Segment:
             eeg_logger.debug("Length Seconds: {}".format(self.get_length_sec()))
             eeg_logger.debug("Samples: {}".format(self.get_n_samples()))
             eeg_logger.debug("Sampling Frequency: {} Hz".format(self.get_sampling_frequency()))
-            eeg_logger.debug("Sequence: {}".format(self.get_sequence()))
+            # eeg_logger.debug("Sequence: {}".format(self.get_sequence()))
             eeg_logger.debug("Channel 0 data: {}".format(self.get_channel_data(0)))
             eeg_logger.debug("Channels: {}".format(self.get_channels()))
 
@@ -298,10 +301,53 @@ class Segment:
         mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
         return mad / c
 
-    def raw_plot(self):
+    def raw_plot(self, channel=1):
         import matplotlib.pyplot as plt
-        plt.plot(self.get_channel_data(1), linestyle='', marker='x')
-        plt.show()
+        import seaborn as sns
+
+        plt.rc('xtick', labelsize=10)
+        plt.rc('ytick', labelsize=10)
+        plt.rc('axes', labelsize=10)
+
+        self.resample_frequency(40.0, method='resample', inplace=True)
+
+        x_limits = [0, self.get_duration()]
+
+        # Creating the time axis for the plot
+        t_index = np.arange(0, self.get_duration(), 1 / self.get_sampling_frequency())
+
+        width = 20
+        height = width / 1.618
+
+        fig, ax = plt.subplots()
+        fig.subplots_adjust(left=.05, bottom=.05, right=.99, top=.97)
+        fig.set_size_inches(width, height)
+
+        ax1 = plt.subplot(311)
+        plt.plot(t_index * self.get_sampling_frequency(), self.get_channel_data(1))
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        plt.title('Segmento: {}\nCanal: {}'.format(self.get_filename(), 1), size=10)
+
+        ax2 = plt.subplot(312, sharex=ax1, sharey=ax1)
+        plt.plot(t_index * self.get_sampling_frequency(), self.get_channel_data(2))
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.title('Canal: {}'.format(2), size=10)
+        plt.ylabel(u'Voltage (µV)', size=10)
+
+        ax3 = plt.subplot(313, sharex=ax1, sharey=ax1)
+        plt.plot(t_index * self.get_sampling_frequency(), self.get_channel_data(3))
+        plt.setp(ax3.get_xticklabels(), fontsize=10)
+        plt.title('Canal: {}'.format(3), size=10)
+        plt.xlabel(u'Tiempo (seg)', size=10)
+
+        sns.set_style('white')
+
+        sns.despine()
+
+        plt.xlim(x_limits)
+        #plt.show()
+
+        plt.savefig('{}_segment.png'.format(self.get_name()))
 
 
 class DFSegment(object):
