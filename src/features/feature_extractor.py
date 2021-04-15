@@ -1,5 +1,4 @@
 """ Python module for doing feature extraction in parallel over segments """
-from __future__ import absolute_import
 
 import csv
 import multiprocessing

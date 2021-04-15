@@ -3,9 +3,6 @@
 Script:    Module holding some utilities for doing file related stuff
 ------------------------------------------------------------------------------------------------------
 """
-
-from __future__ import absolute_import
-
 # General
 import os.path
 import re

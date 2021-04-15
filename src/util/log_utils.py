@@ -10,7 +10,7 @@ import logging.handlers
 import os
 
 import src
-from . import file_utils
+import file_utils
 
 
 def setup_logging(name, timestamp, file_components, optional_file_components, args, level=logging.INFO):

@@ -1,6 +1,4 @@
 """Module for dealing with submissions"""
-from __future__ import absolute_import
-
 import csv
 import sys
 from collections import defaultdict

@@ -1,5 +1,4 @@
 """Module for running the classification pipeline in python"""
-from __future__ import absolute_import
 
 import datetime
 import glob
@@ -13,7 +12,8 @@ import numpy as np
 import src
 from src.util import file_utils
 from src.util.file_utils import FileHelper
-from . import submissions, seizure_modeling
+import submissions
+import seizure_modeling
 from ..datasets import dataset, features_combined, correlation_convertion, wavelet_classification
 
 eeg_logger = logging.getLogger(src.get_logger_name())
@@ -61,7 +61,7 @@ def run_batch_classification(feature_folders,
     :param csv_directory: Where to place the resulting classification files
     :param do_downsample: If true downsampling of the interictal features will be performed
     :param downsample_ratio: The ratio of interictal to preictal samples after downsampling.
-    :param do_standardize: If True, the features will be standarized before classification
+    :param do_standardize: If True, the features will be standardized before classification
     :param do_segment_split: If True, the cross-validation will be performed by splitting on whole segments
     :param do_pca: If True, the the PCA feature reduction will be performed on the data.
     :param random_state: Seed
@@ -222,7 +222,7 @@ def preprocess_features(interictal,
     This can include downsampling the interictal data, standardizing the data and performing PCA feature reduction.
     :param interictal: A DataFrame with the interictal training data.
     :param preictal: A DataFrame with the preictal training data.
-    :param test: A DataFrame with the unlabled test data.
+    :param test: A DataFrame with the unlabeled test data.
     :param do_downsample: If True, the majority class (the interictal data) will be downsampled.
     :param downsample_ratio: The ratio of interictal/preictal class size after downsampling. Set to 1.0 to make the
                              classes equal size.
@@ -281,7 +281,7 @@ def run_classification(interictal_data,
 
     :param interictal_data: A DataFrame with the interictal training data.
     :param preictal_data: A DataFrame with the preictal training data.
-    :param unlabeled_data: A DataFrame with the unlabled test data.
+    :param unlabeled_data: A DataFrame with the unlabeled test data.
     :param subject_folder: The folder holding the features for the subject, this is where the model file and subject
                            scores are saved if csv_directory is not given.
     :param training_ratio: The ratio of training data to use for the training set during cross validation.
@@ -429,13 +429,13 @@ def get_cli_args():
                               " means it's a folder containing the canonical"
                               " subject directories. If that is the case,"
                               " it will be expanded into those subject folders."
-                              " If it doesn't contain any canonical sujbect"
+                              " If it doesn't contain any canonical subject"
                               " folder, the argument is assumed to contain"
                               " feature files."),
                         nargs='+')
     parser.add_argument("-t", "--feature-type",
                         help=("The type of the features for the classification."
-                              " 'cross-correlations' and 'xcorr' are synonymns."
+                              " 'cross-correlations' and 'xcorr' are synonyms."
                               "If the method is 'combined', the name of the "
                               "folder wil be used to decide which feature loader"
                               " to use. The folder must have the string "
@@ -470,7 +470,7 @@ def get_cli_args():
     parser.add_argument("--downsample-ratio",
                         default=2.0,
                         type=float,
-                        help="The raio of majority class to minority class after downsampling.",
+                        help="The ratio of majority class to minority class after downsampling.",
                         dest='downsample_ratio')
     parser.add_argument("--standardize",
                         action='store_true',
@@ -485,7 +485,7 @@ def get_cli_args():
     parser.add_argument("--no-refit",
                         action='store_false',
                         default=True,
-                        help="Don't refit the selected model with the held-out data used to produce accurace scores",
+                        help="Don't refit the selected model with the held-out data used to produce accuracy scores",
                         dest='do_refit')
     parser.add_argument("--no-segment-split",
                         action='store_false',
@@ -504,7 +504,7 @@ def get_cli_args():
                                  'bagging'],
                         default='logistic')
     parser.add_argument("--processes",
-                        help="How many processes should be used for parellelized work.",
+                        help="How many processes should be used for parallelized work.",
                         dest='processes',
                         default=4,
                         type=int)

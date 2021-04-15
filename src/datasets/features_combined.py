@@ -1,12 +1,10 @@
 """
 Module for dealing with combined features
 """
-from __future__ import absolute_import
-
 import pandas as pd
 
-from . import correlation_convertion
-from . import wavelet_classification
+import correlation_convertion
+import wavelet_classification
 
 
 def load(segment_files, **kwargs):
@@ -26,4 +24,3 @@ def load(segment_files, **kwargs):
         else:
             raise NotImplementedError("Don't know which feature loading function to use for {}.".format(segment_file))
     return pd.concat(dataframes, axis=1)
-

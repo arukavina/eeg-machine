@@ -1,14 +1,11 @@
 """
 Module for loading cross-correlation features.
 """
-from __future__ import absolute_import
-
 import re
-
 import pandas as pd
 
 from src.util import file_utils
-from . import dataset
+import dataset
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
@@ -58,7 +55,7 @@ def load_and_pivot(filename, frame_length=1, sliding_frames=True):
     with open(filename) as fp:
         dataframe = pd.read_csv(fp, sep="\t")
 
-        #Figure out if this file contains the old or new format
+        # Figure out if this file contains the old or new format
         if 'channel_i' in dataframe.columns:
             pivoted = old_load_and_pivot(dataframe)
         else:

@@ -309,7 +309,7 @@ class Segment:
         plt.rc('ytick', labelsize=10)
         plt.rc('axes', labelsize=10)
 
-        self.resample_frequency(40.0, method='resample', inplace=True)
+        self.resample_frequency(20.0, method='resample', inplace=True)
 
         x_limits = [0, self.get_duration()]
 
@@ -318,6 +318,7 @@ class Segment:
 
         width = 20
         height = width / 1.618
+        sns.set_style('white')
 
         fig, ax = plt.subplots()
         fig.subplots_adjust(left=.05, bottom=.05, right=.99, top=.97)
@@ -340,7 +341,6 @@ class Segment:
         plt.title('Canal: {}'.format(3), size=10)
         plt.xlabel(u'Tiempo (seg)', size=10)
 
-        sns.set_style('white')
 
         sns.despine()
 
@@ -357,7 +357,7 @@ class DFSegment(object):
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
         """
         Construct a new signal DataFrame wrapper.
-        :param sampling_frequency: The frequence of the signal.
+        :param sampling_frequency: The frequency of the signal.
         :param dataframe: The signal data as a pandas DataFrame
         :param do_downsample: if True, the signal will be resampled to the downsample_frequency.
         :param downsample_frequency: The frequency to which the signal should be downsampled.

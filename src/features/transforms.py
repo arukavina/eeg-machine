@@ -23,7 +23,6 @@ try:
 except ImportError:
     pass
 
-
 eeg_logger = logging.getLogger(src.get_logger_name())
 
 
@@ -34,6 +33,7 @@ class Filter:
     """
     Apply pre-processing filters
     """
+
     def __init__(self, sample_rate):
         self.sample_rate = sample_rate
         self.nyq = 0.5 * sample_rate
@@ -42,8 +42,7 @@ class Filter:
         ripple = 3
         attenuation = 50
         cutoff /= self.nyq
-        b, a = iirfilter(N=order, Wn=cutoff, rp=ripple, rs=attenuation,
-                         btype=btype, ftype='ellip')
+        b, a = iirfilter(N=order, Wn=cutoff, rp=ripple, rs=attenuation, btype=btype, ftype='ellip')
         return lfilter(b, a, data, axis=0)
 
     def apply_butter_filter(self, data, order, cutoff, btype):
@@ -52,7 +51,6 @@ class Filter:
         return filtfilt(b, a, data, axis=1)
 
     def apply(self, data):
-
         # 49-51Hz 12th order bandstop filter to remove power line noise
         band_low = 49.0
         band_high = 51.0
@@ -77,6 +75,7 @@ class FFT:
     """
     Apply Fast Fourier Transform to the last axis.
     """
+
     def get_name(self):
         return "fft"
 
@@ -90,6 +89,7 @@ class Slice:
     Take a slice of the data on the last axis.
     e.g. Slice(1, 48) works like a normal sics_seizure_prediction slice, that is 1-47 will be taken
     """
+
     def __init__(self, start, end):
         self.start = start
         self.end = end
@@ -107,6 +107,7 @@ class LPF:
     """
     Low-pass filter using FIR window
     """
+
     def __init__(self, f):
         self.f = f
 
@@ -115,7 +116,7 @@ class LPF:
 
     def apply(self, data):
         nyq = self.f / 2.0
-        cutoff = min(self.f, nyq-1)
+        cutoff = min(self.f, nyq - 1)
         h = signal.firwin(numtaps=101, cutoff=cutoff, nyq=nyq)
 
         # data[i][ch][dim0]
@@ -131,6 +132,7 @@ class MFCC:
     """
     Mel-frequency cepstrum coefficients
     """
+
     def get_name(self):
         return "mfcc"
 
@@ -147,6 +149,7 @@ class Magnitude:
     """
     Take magnitudes of Complex data
     """
+
     def get_name(self):
         return "mag"
 
@@ -158,6 +161,7 @@ class MagnitudeAndPhase:
     """
     Take the magnitudes and phases of complex data and append them together.
     """
+
     def get_name(self):
         return "magphase"
 
@@ -171,6 +175,7 @@ class Log10:
     """
     Apply Log10
     """
+
     def get_name(self):
         return "log10"
 
@@ -186,6 +191,7 @@ class Stats:
     """
     Subtract the mean, then take (min, max, standard_deviation) for each channel.
     """
+
     def get_name(self):
         return "stats"
 
@@ -208,6 +214,7 @@ class Resample:
     """
     Resample time-series data.
     """
+
     def __init__(self, sample_rate):
         self.f = sample_rate
 
@@ -225,6 +232,7 @@ class ResampleHanning:
     """
     Resample time-series data using a Hanning window
     """
+
     def __init__(self, sample_rate):
         self.f = sample_rate
 
@@ -242,6 +250,7 @@ class DaubWaveletStats:
     Daubechies wavelet coefficients. For each block of co-efficients
     take (mean, std, min, max)
     """
+
     def __init__(self, n):
         self.n = n
 
@@ -254,14 +263,14 @@ class DaubWaveletStats:
         out = np.empty((shape[0], 4 * (self.n * 2 + 1)), dtype=np.float64)
 
         def set_stats(outi, x, offset):
-            outi[offset*4] = np.mean(x)
-            outi[offset*4+1] = np.std(x)
-            outi[offset*4+2] = np.min(x)
-            outi[offset*4+3] = np.max(x)
+            outi[offset * 4] = np.mean(x)
+            outi[offset * 4 + 1] = np.std(x)
+            outi[offset * 4 + 2] = np.min(x)
+            outi[offset * 4 + 3] = np.max(x)
 
         for i in range(len(data)):
             outi = out[i]
-            new_data = pywt.wavedec(data[i], 'db%d' % self.n, level=self.n*2)
+            new_data = pywt.wavedec(data[i], 'db%d' % self.n, level=self.n * 2)
             for j, x in enumerate(new_data):
                 set_stats(outi, x, j)
 
@@ -272,6 +281,7 @@ class UnitScale:
     """
     Scale across the last axis.
     """
+
     def __init__(self):
         pass
 
@@ -281,13 +291,14 @@ class UnitScale:
 
     @staticmethod
     def apply(self, data):
-        return preprocessing.scale(data, axis=data.ndim-1)
+        return preprocessing.scale(data, axis=data.ndim - 1)
 
 
 class UnitScaleFeat:
     """
     Scale across the first axis, i.e. scale each feature.
     """
+
     def __init__(self):
         pass
 
@@ -304,6 +315,7 @@ class CorrelationMatrix:
     """
     Calculate correlation coefficients matrix across all EEG channels.
     """
+
     def __init__(self):
         pass
 
@@ -321,6 +333,7 @@ class Eigenvalues:
     Take eigenvalues of a matrix, and sort them by magnitude in order to
     make them useful as features (as they have no inherent order).
     """
+
     def __init__(self):
         pass
 
@@ -329,7 +342,7 @@ class Eigenvalues:
         return 'eigenvalues'
 
     @staticmethod
-    def apply( data):
+    def apply(data):
         w, v = np.linalg.eig(data)
         w = np.absolute(w)
         w.sort()
@@ -340,7 +353,7 @@ class Eigenvalues:
 def upper_right_triangle(matrix):
     accum = []
     for i in range(matrix.shape[0]):
-        for j in range(i+1, matrix.shape[1]):
+        for j in range(i + 1, matrix.shape[1]):
             accum.append(matrix[i, j])
 
     return np.array(accum)
@@ -362,6 +375,7 @@ class OverlappingFFTDeltas:
 
     NOTE: Experimental, not sure if this works properly.
     """
+
     def __init__(self, num_parts, parts_per_window, start, end):
         self.num_parts = num_parts
         self.parts_per_window = parts_per_window
@@ -376,14 +390,14 @@ class OverlappingFFTDeltas:
 
         parts = np.split(data, self.num_parts, axis=axis)
 
-        #if slice end is 208, we want 208hz
+        # if slice end is 208, we want 208hz
         partial_size = (1.0 * self.parts_per_window) / self.num_parts
-        #if slice end is 208, and partial_size is 0.5, then end should be 104
+        # if slice end is 208, and partial_size is 0.5, then end should be 104
         partial_end = int(self.end * partial_size)
 
         partials = []
         for i in range(self.num_parts - self.parts_per_window + 1):
-            combined_parts = parts[i:i+self.parts_per_window]
+            combined_parts = parts[i:i + self.parts_per_window]
             if self.parts_per_window > 1:
                 d = np.concatenate(combined_parts, axis=axis)
             else:
@@ -395,9 +409,10 @@ class OverlappingFFTDeltas:
 
         diffs = []
         for i in range(1, len(partials)):
-            diffs.append(partials[i] - partials[i-1])
+            diffs.append(partials[i] - partials[i - 1])
 
         return np.concatenate(diffs, axis=axis)
+
 
 # Not used...
 class FFTWithOverlappingFFTDeltas:
@@ -406,6 +421,7 @@ class FFTWithOverlappingFFTDeltas:
 
     NOTE: Experimental, not sure if this works properly.
     """
+
     def __init__(self, num_parts, parts_per_window, start, end):
         self.num_parts = num_parts
         self.parts_per_window = parts_per_window
@@ -424,14 +440,14 @@ class FFTWithOverlappingFFTDeltas:
 
         parts = np.split(data, self.num_parts, axis=axis)
 
-        #if slice end is 208, we want 208hz
+        # if slice end is 208, we want 208hz
         partial_size = (1.0 * self.parts_per_window) / self.num_parts
-        #if slice end is 208, and partial_size is 0.5, then end should be 104
+        # if slice end is 208, and partial_size is 0.5, then end should be 104
         partial_end = int(self.end * partial_size)
 
         partials = []
         for i in range(self.num_parts - self.parts_per_window + 1):
-            d = np.concatenate(parts[i:i+self.parts_per_window], axis=axis)
+            d = np.concatenate(parts[i:i + self.parts_per_window], axis=axis)
             d = Slice(self.start, partial_end).apply(np.fft.rfft(d, axis=axis))
             d = Magnitude().apply(d)
             d = Log10().apply(d)
@@ -439,7 +455,7 @@ class FFTWithOverlappingFFTDeltas:
 
         out = [full_fft]
         for i in range(1, len(partials)):
-            out.append(partials[i] - partials[i-1])
+            out.append(partials[i] - partials[i - 1])
 
         return np.concatenate(out, axis=axis)
 
@@ -454,6 +470,7 @@ class FreqCorrelation:
 
     Features can be selected/omitted using the constructor arguments.
     """
+
     def __init__(self, start, end, scale_option, with_fft=False, with_corr=True, with_eigen=True):
         self.start = start
         self.end = end
@@ -524,6 +541,7 @@ class TimeCorrelation:
 
     Features can be selected/omitted using the constructor arguments.
     """
+
     def __init__(self, max_hz, scale_option, with_corr=True, with_eigen=True):
         self.max_hz = max_hz
         self.scale_option = scale_option
@@ -596,6 +614,7 @@ class TimeFreqCorrelation:
     """
     Combines time and frequency correlation, taking both correlation coefficients and eigenvalues.
     """
+
     def __init__(self, start, end, max_hz, scale_option):
         self.start = start
         self.end = end
@@ -610,13 +629,14 @@ class TimeFreqCorrelation:
         data1 = TimeCorrelation(self.max_hz, self.scale_option).apply(data)
         data2 = FreqCorrelation(self.start, self.end, self.scale_option).apply(data)
         assert data1.ndim == data2.ndim
-        return np.concatenate((data1, data2), axis=data1.ndim-1)
+        return np.concatenate((data1, data2), axis=data1.ndim - 1)
 
 
 class FFTWithTimeFreqCorrelation(object):
     """
     Combines FFT with time and frequency correlation, taking both correlation coefficients and eigenvalues.
     """
+
     def __init__(self, start, end, max_hz, scale_option):
         self.start = start
         self.end = end
@@ -630,11 +650,12 @@ class FFTWithTimeFreqCorrelation(object):
         data1 = TimeCorrelation(self.max_hz, self.scale_option).apply(data)
         data2 = FreqCorrelation(self.start, self.end, self.scale_option, with_fft=True).apply(data)
         assert data1.ndim == data2.ndim
-        return np.concatenate((data1, data2), axis=data1.ndim-1)
+        return np.concatenate((data1, data2), axis=data1.ndim - 1)
 
 
 class FilteredFFTWithTFCorrelation(FFTWithTimeFreqCorrelation):
     """docstring for FilteredFFTWithTFCorrelation"""
+
     def __init__(self, start, end, max_hz, scale_option, sample_rate):
         super(FilteredFFTWithTFCorrelation, self).__init__(start, end, max_hz, scale_option)
         self.sample_rate = sample_rate

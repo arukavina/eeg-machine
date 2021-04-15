@@ -1,33 +1,30 @@
-from __future__ import absolute_import
-
 import json
 import platform
 import logging
 import logging.handlers
 import os
 import datetime
+import sys
 
 import src
 from src.util import file_utils
 
-print platform.machine()
-print platform.version()
-print platform.platform()
-print platform.uname()
-print platform.system()
-print platform.processor()
+print(platform.machine())
+print(platform.version())
+print(platform.platform())
+print(platform.uname())
+print(platform.system())
+print(platform.processor())
 
 
 '''
 x86_64
-Darwin Kernel Version 16.4.0: Thu Dec 22 22:53:21 PST 2016; root:xnu-3789.41.3~3/RELEASE_X86_64
-Darwin-16.4.0-x86_64-i386-64bit
-('Darwin', 'ar-ws-01', '16.4.0', 'Darwin Kernel Version 16.4.0: Thu Dec 22 22:53:21 PST 2016; root:xnu-3789.41.3~3/RELEASE_X86_64', 'x86_64', 'i386')
+Darwin Kernel Version 20.3.0: Thu Jan 21 00:07:06 PST 2021; root:xnu-7195.81.3~1/RELEASE_X86_64
+macOS-10.16-x86_64-i386-64bit
+uname_result(system='Darwin', node='ar-ws-01', release='20.3.0', version='Darwin Kernel Version 20.3.0: Thu Jan 21 00:07:06 PST 2021; root:xnu-7195.81.3~1/RELEASE_X86_64', machine='x86_64')
 Darwin
 i386
 '''
-
-import sys
 
 
 def setup_logging(name, timestamp, file_components, optional_file_components, args):
@@ -139,6 +136,7 @@ def main():
     print(eeg_logger)
 
     eeg_logger.info("Extracting Features")
+
 
 if __name__ == '__main__':
     main()

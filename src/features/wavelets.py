@@ -10,11 +10,6 @@ Creates an SPLV [1] feature dictionary from a Segment object
 
 GPL
 """
-
-# Futures
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Built-in/Generic Imports
 import logging
 import sys

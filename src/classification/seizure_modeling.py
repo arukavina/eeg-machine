@@ -1,8 +1,4 @@
 """Module for doing the training of the models."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import logging
 
 import numpy as np

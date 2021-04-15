@@ -6,11 +6,6 @@ Module for Extracting Hills features.
 Creates a feature dictionary from a Segment object, according to the provided transformation function.
 GPL
 """
-
-# Futures
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Built-in/Generic Imports
 import logging
 import sys

@@ -6,11 +6,6 @@ Script:    Module for running the feature extraction and model training.
 Author:    Andrei Rukavina <arukavina@analyticar.com>
 ------------------------------------------------------------------------------------------------------
 """
-
-# Future
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Libs
 import datetime
 import logging

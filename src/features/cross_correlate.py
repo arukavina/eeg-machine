@@ -2,8 +2,6 @@
 """
 Module for calculating the cross correlation between channels.
 """
-from __future__ import absolute_import
-from __future__ import division
 
 import csv
 import os.path
