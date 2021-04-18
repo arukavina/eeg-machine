@@ -10,12 +10,10 @@ import datetime
 import logging
 
 # Own
-import eeg-machine
-from src.classification import classification_pipeline
-from src.features import hills, wavelets, cross_correlate
-from src.util import log_utils as lu
-from src.util import settings_util as su
-from src.util import file_utils as fu
+from eeg_machine import setup_logging
+from eeg_machine.util import log_utils as lu
+from eeg_machine.util import settings_util as su
+from eeg_machine.util import file_utils as fu
 
 __author__ = 'Andrei Rukavina'
 __copyright__ = '2021, EGG-Machine'

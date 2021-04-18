@@ -10,8 +10,8 @@ import datetime
 import logging
 
 # Own
-from src import setup_logging
-from src.features import basic_segment_statistics as bss
+from eeg_machine import setup_logging
+from eeg_machine.features import basic_segment_statistics as bss
 
 __author__ = 'Andrei Rukavina'
 __copyright__ = '2021, EGG-Machine'
@@ -48,8 +48,8 @@ def main():
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
 
-    setup_logging(__name__, timestamp)
-    eeg_logger = logging.getLogger(__name__)
+    setup_logging('eeg-stats', timestamp)
+    eeg_logger = logging.getLogger('eeg_machine.main')
 
     eeg_logger.info("Calculating segment statistics")
     bss.calculate_statistics(args.feature_folder, args.csv_directory, args.glob_suffix, args.subset)

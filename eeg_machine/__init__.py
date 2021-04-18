@@ -5,12 +5,12 @@ import logging.handlers
 import os
 
 # Own modules
-from src.util import file_utils
+from eeg_machine.util import file_utils
 
-PKG_LOGGER = logging.getLogger(__name__)
+EEG_LOGGER = logging.getLogger(__name__)
 
 
-def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./log'):
+def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./../logs'):
     """
     Sets up the logger for the classification.
     :param name: Logger instance name
@@ -19,17 +19,6 @@ def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./log'):
     :param log_path: Logging path
     :return: None
     """
-
-    msg_format = '%(asctime)s [%(levelname)8s] %(message)s (%(name)s - %(filename)s:%(lineno)s)'
-    date_format = '%Y-%m-%d %H:%M:%S'
-    formatter = logging.Formatter(fmt=msg_format, datefmt=date_format)
-    console_handler = logging.StreamHandler(stream=sys.stdout)
-    console_handler.setLevel(logging.DEBUG)
-    console_handler.setFormatter(formatter)
-    PKG_LOGGER.addHandler(console_handler)
-    PKG_LOGGER.setLevel(logging.DEBUG)
-    PKG_LOGGER.propagate = False
-    PKG_LOGGER.info('finished logging setup!')
 
     if not os.path.exists(log_path):
         os.makedirs(log_path)
@@ -43,8 +32,10 @@ def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./log'):
     #                                              optional_components=optional_file_components,
     #                                              timestamp=timestamp)
 
+    # formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
+    #                              '([%(filename)s|%(name)s::%(funcName)s) :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
     formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
-                                  '([%(filename)s::%(funcName)s) :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+                                  '[%(name)s::%(funcName)s()] :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 
     # Handlers
     fh_path = os.path.join(log_path, log_file)
@@ -63,21 +54,21 @@ def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./log'):
     std_handler.setLevel(level)
 
     # Logger
-    PKG_LOGGER.addHandler(file_handler)
+    EEG_LOGGER.addHandler(file_handler)
     # my_log.addHandler(file_handler_hist)
-    PKG_LOGGER.addHandler(std_handler)
-    PKG_LOGGER.propagate = False
-    PKG_LOGGER.handlers = []
-    PKG_LOGGER.setLevel(level)
+    EEG_LOGGER.addHandler(std_handler)
+    EEG_LOGGER.propagate = False
+    EEG_LOGGER.setLevel(level)
+
+    EEG_LOGGER.info('Logging configured at project level!')
 
 
 def print_imports_versions():
     """
     Prints on logger the information about the version of all the imported modules
 
-    :param logger: Logging object to be used
-    :return:
+    :return: None
     """
     for name, module in sorted(sys.modules.items()):
         if hasattr(module, '__version__'):
-            PKG_LOGGER.info('{0} :: {1}'.format(name, module.__version__))
+            EEG_LOGGER.info('{0} :: {1}'.format(name, module.__version__))
