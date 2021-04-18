@@ -1,5 +1,6 @@
 """Module for doing the training of the models."""
-# Generic
+
+# Built-in/Generic Imports
 import logging
 
 # Libs
@@ -10,8 +11,10 @@ import sklearn
 from sklearn import model_selection
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
-# Own
-from src.datasets import dataset
+# Own modules
+from eeg_machine.datasets import dataset
+
+seizure_logger = logging.getLogger(__name__)
 
 
 def get_model_class(method):

@@ -5,9 +5,11 @@
 Module for loading and manipulating  EEG segments.
 """
 
+# Built-in/Generic Imports
 import glob
 import os.path
 
+# Libs
 import numpy as np
 import pandas as pd
 import scipy.io
@@ -15,10 +17,10 @@ import scipy.signal
 import scipy.stats
 import logging
 
-import src
-from src.util import file_utils
+# Own modules
+from eeg_machine.util import file_utils as fu
 
-eeg_logger = logging.getLogger(src.get_logger_name())
+segment_logger = logging.getLogger(__name__)
 
 
 def load_segment(segment_path,
@@ -37,7 +39,7 @@ def load_segment(segment_path,
     :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
     :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
     """
-    eeg_logger.info("Starting Load Segment")
+    segment_logger.info("Starting Load Segment")
 
     if normalize_signal:
         return load_and_standardize(segment_path,
@@ -45,7 +47,7 @@ def load_segment(segment_path,
                                     matlab_segment_format=matlab_segment_format)
     else:
         if matlab_segment_format:
-            eeg_logger.info("Using Matlab Segment format")
+            segment_logger.info("Using Matlab Segment format")
             segment = Segment(segment_path)
         else:
             segment = DFSegment.from_mat_file(segment_path)
@@ -75,12 +77,12 @@ def load_and_standardize(mat_filename, stats_glob='/Users/arukavina/Documents/EE
     :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose
     name contains the same subject as mat_filename
     """
-    from src.features import basic_segment_statistics
+    from eeg_machine.features import basic_segment_statistics
 
-    subject = file_utils.FileHelper.get_subject(mat_filename)
+    subject = fu.FileHelper.get_subject(mat_filename)
     stats_files = [filename for filename
                    in glob.glob(stats_glob)
-                   if subject == file_utils.FileHelper.get_subject(filename)]
+                   if subject == fu.FileHelper.get_subject(filename)]
     if len(stats_files) != 1:
         raise ValueError("Can't determine which stats file to use"
                          " with the glob {} and the subject {}".format(stats_glob, subject))
@@ -118,17 +120,17 @@ class Segment:
             self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
             self.mat_struct.data = self.mat_struct.data.astype('float64')
 
-            eeg_logger.debug("Mat struct data example for struct: {} ({}):".format(self.name, self.filename))
-            eeg_logger.debug("Duration: {}".format(self.get_duration()))
-            eeg_logger.debug("Length Seconds: {}".format(self.get_length_sec()))
-            eeg_logger.debug("Samples: {}".format(self.get_n_samples()))
-            eeg_logger.debug("Sampling Frequency: {} Hz".format(self.get_sampling_frequency()))
+            segment_logger.debug("Mat struct data example for struct: {} ({}):".format(self.name, self.filename))
+            segment_logger.debug("Duration: {}".format(self.get_duration()))
+            segment_logger.debug("Length Seconds: {}".format(self.get_length_sec()))
+            segment_logger.debug("Samples: {}".format(self.get_n_samples()))
+            segment_logger.debug("Sampling Frequency: {} Hz".format(self.get_sampling_frequency()))
             # eeg_logger.debug("Sequence: {}".format(self.get_sequence()))
-            eeg_logger.debug("Channel 0 data: {}".format(self.get_channel_data(0)))
-            eeg_logger.debug("Channels: {}".format(self.get_channels()))
+            segment_logger.debug("Channel 0 data: {}".format(self.get_channel_data(0)))
+            segment_logger.debug("Channels: {}".format(self.get_channels()))
 
         except ValueError as exception:
-            eeg_logger.info("Error when loading {}".format(mat_filename))
+            segment_logger.info("Error when loading {}".format(mat_filename))
             raise exception
 
     def get_name(self):
@@ -219,18 +221,18 @@ class Segment:
             raise ValueError("Resample on Segment only supports inplace")
         data = self.mat_struct.data
         if method == 'resample':
-            eeg_logger.info("Using scipy.signal.resample with new frequency of: {}".format(new_frequency))
+            segment_logger.info("Using scipy.signal.resample with new frequency of: {}".format(new_frequency))
             # Use scipy.signal.resample
             n_samples = int(self.get_n_samples() * new_frequency / self.mat_struct.sampling_frequency)
             resampled_signal = scipy.signal.resample(data, n_samples, axis=1, **method_kwargs)
         elif method == 'decimate':
-            eeg_logger.info("Using scipy.signal.decimate")
+            segment_logger.info("Using scipy.signal.decimate")
             # Use scipy.signal.decimate
             decimation_factor = int(round(self.mat_struct.sampling_frequency / new_frequency))
             # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
             adjusted_new_frequency = self.mat_struct.sampling_frequency / decimation_factor
             if adjusted_new_frequency != new_frequency:
-                eeg_logger.info("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
+                segment_logger.info("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
             new_frequency = adjusted_new_frequency
             resampled_signal = scipy.signal.decimate(data,
                                                      decimation_factor,
@@ -272,7 +274,7 @@ class Segment:
         """
 
         if scale.any() <= 0:
-            eeg_logger.error("Scale vector contains 0s, scaling is not possible. {}".format(scale))
+            segment_logger.error("Scale vector contains 0s, scaling is not possible. {}".format(scale))
             raise ZeroDivisionError("0 or NAs found in Scale vector. Check statistics or change scale metric")
 
         self.mat_struct.data = self.mat_struct.data / scale
@@ -454,18 +456,18 @@ class DFSegment(object):
         """
 
         if method == 'resample':
-            eeg_logger.info("Using scipy.signal.resample")
+            segment_logger.info("Using scipy.signal.resample")
             # Use scipy.signal.resample
             n_samples = int(len(self.dataframe) * new_frequency / self.sampling_frequency)
             resampled_signal = scipy.signal.resample(self.dataframe, n_samples, **method_kwargs)
         elif method == 'decimate':
-            eeg_logger.info("Using scipy.signal.decimate")
+            segment_logger.info("Using scipy.signal.decimate")
             # Use scipy.signal.decimate
             decimation_factor = int(self.sampling_frequency / new_frequency)
             # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
             adjusted_new_frequency = self.sampling_frequency / decimation_factor
             if adjusted_new_frequency != new_frequency:
-                eeg_logger.info("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
+                segment_logger.info("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
             new_frequency = adjusted_new_frequency
             resampled_signal = scipy.signal.decimate(self.dataframe,
                                                      decimation_factor,
@@ -545,7 +547,7 @@ class DFSegment(object):
             return cls(sampling_frequency, dataframe)
 
         except ValueError as exception:
-            eeg_logger.error("Error when loading {}".format(mat_filename))
+            segment_logger.error("Error when loading {}".format(mat_filename))
             raise exception
 
     @classmethod
@@ -574,13 +576,13 @@ def concat(segments):
 def test_segment_classes():
     s_new = DFSegment.from_mat_file('../../data/Dog_1/Dog_1_preictal_segment_0001.mat')
     s_old = Segment('../../data/Dog_1/Dog_1_preictal_segment_0001.mat')
-    eeg_logger.info('Matching durations: ', s_old.get_duration() == s_new.get_duration())
+    segment_logger.info('Matching durations: ', s_old.get_duration() == s_new.get_duration())
     for start in np.arange(0, s_new.get_duration(), 9.3):
         for channel in s_new.get_channels():
             c_new = s_new.get_channel_data(channel, start, start + 9.3)
             c_old = s_old.get_channel_data(channel, start, start + 9.3)
-            eeg_logger.info('Length of new: {}, length of old: {}'.format(len(c_new), len(c_old)))
-            eeg_logger.info('Data matching for channel {}: {}'.format(channel, all(c_new == c_old)))
+            segment_logger.info('Length of new: {}, length of old: {}'.format(len(c_new), len(c_old)))
+            segment_logger.info('Data matching for channel {}: {}'.format(channel, all(c_new == c_old)))
 
 
 def example_preictal():

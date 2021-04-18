@@ -1,11 +1,18 @@
+#!/bin/env python
+
 """
 Module for loading cross-correlation features.
 """
+
+# Built-in/Generic Imports
 import re
+
+# Libs
 import pandas as pd
 
-from src.util import file_utils
-from src.datasets import dataset
+# Own modules
+from eeg_machine.util import file_utils
+from eeg_machine.datasets import dataset
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
@@ -32,15 +39,13 @@ def old_load_and_pivot(dataframe):
 
     dataframe.drop(['channel_i', 'channel_j', 'end_sample', 't_offset'], axis=1, inplace=True)
     max_corrs = dataframe.groupby(['channels', 'start_sample'], as_index=False).max()
-    pivoted = max_corrs.pivot('start_sample', 'channels', 'correlation')
-    return pivoted
+    return max_corrs.pivot('start_sample', 'channels', 'correlation')
 
 
 def new_load_and_pivot(dataframe):
     """New version which assumes the columns where the channel pairs are already columns"""
     dataframe.drop(['end_sample', 't_offset'], axis=1, inplace=True)
-    max_corrs = dataframe.groupby('start_sample').max()
-    return max_corrs
+    return dataframe.groupby('start_sample').max()
 
 
 def load_and_pivot(filename, frame_length=1, sliding_frames=True):

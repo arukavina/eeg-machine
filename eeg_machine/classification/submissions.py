@@ -1,14 +1,24 @@
-"""Module for dealing with submissions"""
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Module for dealing with scoring results
+GPL
+"""
+
+# Built-in/Generic Imports
 import csv
 import sys
 from collections import defaultdict
 
+# Libs
 import numpy as np
 
-from src.util import file_utils
+# Own modules
+from eeg_machine.util import file_utils as fu
 
 
-def scores_to_submission(score_dicts, **kwargs):
+def scores_to_results(score_dicts, **kwargs):
     """
     Returns a list of dictionaries with 'clip' and 'preictal' keys, suitable
     for writing to a submission file.
@@ -19,16 +29,15 @@ def scores_to_submission(score_dicts, **kwargs):
     has the keys 'clip' and 'preictal', where the 'clip' item gives the clip filename. The list is sorted by clip.
     """
     all_scores = merge_scores(score_dicts)
-    canonical_names = file_utils.load_testsegment_names()
-    submission = create_submission_rows(all_scores, canonical_names=canonical_names, **kwargs)
-    return submission
+    canonical_names = fu.load_testsegment_names()  # TODO: Andrei check this as you deleted
+    return create_results_rows(all_scores, canonical_names=canonical_names, **kwargs)
 
 
-def create_submission_rows(score_dict,
-                           do_normalize=True,
-                           old_normalization=False,
-                           canonical_names=None,
-                           default_score=0.0):
+def create_results_rows(score_dict,
+                        do_normalize=True,
+                        old_normalization=False,
+                        canonical_names=None,
+                        default_score=0.0):
     """
     Produce a list of scores in a format suitable for writing to a submissions file.
 
@@ -48,7 +57,7 @@ def create_submission_rows(score_dict,
     clip_scores = dict()
     present_segments = set()
     for name, score in score_dict.items():
-        segment_name = file_utils.get_segment_name(name)
+        segment_name = fu.get_segment_name(name)
         present_segments.add(segment_name)
         clip_scores[segment_name] = score
 
@@ -85,7 +94,7 @@ def old_normalize_scores(clip_scores):
 
     new_clip_scores = dict()
     for segment, score in clip_scores.items():
-        subject = file_utils.get_subject(segment)
+        subject = fu.get_subject(segment)
         new_score = old_normalize_score(score, subject_max[subject], subject_min[subject])
         new_clip_scores[segment] = new_score
     return new_clip_scores
@@ -108,7 +117,7 @@ def normalize_scores(clip_scores):
 
     new_clip_scores = dict()
     for segment, score in clip_scores.items():
-        subject = file_utils.get_subject(segment)
+        subject = fu.get_subject(segment)
         new_score = normalize_score(score, subject_means[subject], subject_stds[subject])
         new_clip_scores[segment] = new_score
     return new_clip_scores
@@ -123,7 +132,7 @@ def collect_subject_scores(clip_scores):
     """
     subject_scores = defaultdict(list)
     for segment, score in clip_scores.items():
-        subject = file_utils.get_subject(segment)
+        subject = fu.get_subject(segment)
         subject_scores[subject].append(score)
     return subject_scores
 
@@ -215,7 +224,7 @@ def write_scores(scores,
     :param default_score: The value to use for missing segments in the *scores* list.
     :return: None. The scores are written to the output file-like object.
     """
-    submissions = scores_to_submission(scores, do_normalize=do_normalize, default_score=default_score)
+    submissions = scores_to_results(scores, do_normalize=do_normalize, default_score=default_score)
     csv_writer = csv.DictWriter(output, fieldnames=['clip', 'preictal'])
     csv_writer.writeheader()
     csv_writer.writerows(submissions)
@@ -234,7 +243,7 @@ def submission_from_files(classification_files, **kwargs):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="""Script for producing submission files""")
+    parser = argparse.ArgumentParser(description="""Script for producing score files""")
 
     parser.add_argument("classification_files",
                         help=("The files containing the classification scores. The score files should be"

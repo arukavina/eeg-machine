@@ -6,7 +6,7 @@ Script:    Python module for manipulating datasets
 ------------------------------------------------------------------------------------------------------
 """
 
-# Generics
+# Built-in/Generic Imports
 import logging
 import multiprocessing
 import os
@@ -22,8 +22,10 @@ from sklearn import model_selection, preprocessing
 from sklearn.decomposition import PCA
 from sklearn.model_selection import StratifiedKFold
 
-# Own
-from src.util import file_utils as fu
+# Own modules
+from eeg_machine.util import file_utils as fu
+
+dataset_logger = logging.getLogger(__name__)
 
 
 def first(iterable):
@@ -103,7 +105,7 @@ def transform(transformation, interictal, preictal, test):
     """
 
     if not hasattr(transformation, 'fit_transform'):
-        logging.warning(
+        dataset_logger.warning(
             "Transformation {} has not fit_transform function, no transformation applied".format(transformation))
         return [interictal, preictal, test]
 
@@ -219,7 +221,7 @@ def merge_interictal_preictal(interictal, preictal):
              is sorted.
     """
 
-    logging.info("Merging interictal and preictal datasets")
+    dataset_logger.info("Merging interictal and preictal datasets")
     try:
         preictal.sortlevel('segment', inplace=True)
         if isinstance(preictal.columns, pd.MultiIndex):
@@ -229,7 +231,7 @@ def merge_interictal_preictal(interictal, preictal):
         if isinstance(interictal.columns, pd.MultiIndex):
             interictal.sortlevel(axis=1, inplace=True)
     except TypeError:
-        logging.warning("TypeError when trying to merge interictal and preictal sets.")
+        dataset_logger.warning("TypeError when trying to merge interictal and preictal sets.")
 
     dataset = pd.DataFrame(pd.concat((interictal, preictal)))
     dataset.sort_index('segment', inplace=True)
@@ -479,7 +481,7 @@ def load_feature_files(feature_folder,
     cache_file = os.path.join(output_folder, cache_file_basename)
 
     if rebuild_data or not os.path.exists(cache_file):
-        logging.info("Rebuilding {} data from {}".format(class_name, feature_folder))
+        dataset_logger.info("Rebuilding {} data from {}".format(class_name, feature_folder))
 
         feature_files = find_features_function(feature_folder,
                                                class_name=class_name,
@@ -491,7 +493,7 @@ def load_feature_files(feature_folder,
                                           sliding_frames=sliding_frames)
         complete_frame.to_pickle(cache_file)
     else:
-        logging.info("Loading {} data from "
+        dataset_logger.info("Loading {} data from "
                      "cache file {}".format(class_name,
                                             cache_file))
         complete_frame = pd.read_pickle(cache_file)
@@ -540,7 +542,7 @@ def rebuild_features(feature_file_dicts,
 
     complete_frame.sort_index('segment', inplace=True)
     if np.count_nonzero(np.isnan(complete_frame)) != 0:
-        logging.warning("NaN values found, using interpolation")
+        dataset_logger.warning("NaN values found, using interpolation")
         complete_frame = complete_frame.interpolate(method='linear')
 
     return complete_frame
@@ -555,7 +557,7 @@ def load_files_parallel(feature_files, load_function, processes, **kwargs):
     :param kwargs: Keyword arguments which will be sent to the load function.
     :return: A list of loaded feature data frames or numpy arrays.
     """
-    logging.info("Reading files in parallel")
+    dataset_logger.info("Reading files in parallel")
     pool = multiprocessing.Pool(processes)
     try:
         #Create a partial function with the keyword arguments set. This is done since the parallel map from
@@ -575,7 +577,7 @@ def load_files_serial(feature_files, load_function, **kwargs):
     :param kwargs: keyword arguments for the load function.
     :return: A list of loaded feature data frames or numpy arrays.
     """
-    logging.info("Reading files serially")
+    dataset_logger.info("Reading files serially")
     return [load_function(files, **kwargs) for files in feature_files]
 
 

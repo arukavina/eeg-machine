@@ -1,8 +1,16 @@
+#!/bin/env python
+
+"""
+Module for wavelet classification
+"""
+
+# Libs
 import numpy as np
 import pandas as pd
 
-from src.util import file_utils
-from . import dataset
+# Own modules
+from eeg_machine.util import file_utils
+from eeg_machine.datasets import dataset
 
 
 def load_csv(filename, frame_length=12, sliding_frames=False):
@@ -32,10 +40,10 @@ def load_csv(filename, frame_length=12, sliding_frames=False):
     # Extract this function out into its own file and use it also with the cross correlation frames
     if sliding_frames:
         return pd.DataFrame(data=dataset.extend_data_with_sliding_frames(reshaped_array, frame_length))
-    else:
-        n_frames = reshaped_array.shape[0]/frame_length
-        frame_size = window_size*frame_length
-        return pd.DataFrame(data=reshaped_array.reshape(n_frames, frame_size))
+
+    n_frames = reshaped_array.shape[0]/frame_length
+    frame_size = window_size*frame_length
+    return pd.DataFrame(data=reshaped_array.reshape(n_frames, frame_size))
 
 
 def load_data_frames(feature_folder,

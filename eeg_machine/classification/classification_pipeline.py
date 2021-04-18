@@ -1,5 +1,12 @@
-"""Module for running the classification pipeline in python"""
+#!/bin/env python
+# -*- coding: utf-8 -*-
 
+"""
+Module for running the classification pipeline in python
+GPL
+"""
+
+# Built-in/Generic Imports
 import datetime
 import glob
 import logging
@@ -7,16 +14,17 @@ import os
 import os.path
 import pickle
 
+# Libs
 import numpy as np
 
-import src
-from src.util import file_utils
-from src.util.file_utils import FileHelper
-from src.classification import submissions
-from src.classification import seizure_modeling
-from src.datasets import dataset, features_combined, correlation_convertion, wavelet_classification
+# Own modules
+from eeg_machine.util import file_utils
+from eeg_machine.util.file_utils import FileHelper
+from eeg_machine.classification import submissions
+from eeg_machine.classification import seizure_modeling
+from eeg_machine.datasets import dataset, features_combined, correlation_convertion, wavelet_classification
 
-eeg_logger = logging.getLogger(src.get_logger_name())
+eeg_logger = logging.getLogger(__name__)
 
 
 def run_batch_classification(feature_folders,

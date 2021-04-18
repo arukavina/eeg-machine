@@ -1,0 +1,31 @@
+{
+  "TRAIN_DATA_PATH": [
+    "/Users/arukavina/Documents/EEG/Dog_1",
+    "/Users/arukavina/Documents/EEG/Dog_2",
+    "/Users/arukavina/Documents/EEG/Dog_3"
+  ],
+  "TEST_DATA_PATH": [
+    "/Users/arukavina/Documents/EEG/Dog_1",
+    "/Users/arukavina/Documents/EEG/Dog_2",
+    "/Users/arukavina/Documents/EEG/Dog_3"
+  ],
+  "STATS_FILES": "/Users/arukavina/Documents/EEG/Statistics/*.csv",
+  "MATLAB_SEGMENT_FORMAT": true,
+  "MODEL_PATH": "models",
+  "SCORES_PATH": "scores",
+  "LOG_PATH": "logs",
+  "LOG_LEVEL" : 20,
+  "SAMPLE_SIZE": 500,
+  "CAT_COLUMN": "",
+  "CLASS_LABELS": "",
+  "FEATURE_PATH": "/Users/arukavina/Documents/EEG/Features/Combined",
+  "FEATURE_TYPE": "combined",
+  "FEATURE_SETTINGS": {
+    "WINDOW_SIZE": 5.0,
+    "FRAME_LENGTH": 60.0,
+    "RESAMPLE_FREQUENCY": "",
+    "NORMALIZE_SIGNAL": true
+  },
+  "WORKERS": 1,
+  "ONLY_MISSING_FILES": true
+}

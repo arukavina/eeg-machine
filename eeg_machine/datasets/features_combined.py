@@ -1,10 +1,15 @@
+# -*- coding: utf-8 -*-
+
 """
 Module for dealing with combined features
 """
+
+# Libs
 import pandas as pd
 
-from src.datasets import correlation_convertion
-from src.datasets import wavelet_classification
+# Own modules
+from eeg_machine.datasets import correlation_convertion
+from eeg_machine.datasets import wavelet_classification
 
 
 def load(segment_files, **kwargs):
