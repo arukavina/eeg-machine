@@ -71,7 +71,7 @@ def fix_settings(settings, root_dir):
     :param root_dir: The root path to which any path should be relative.
     :return: A settings dictionary where all the paths are fixed to be relative to the supplied root directory.
     """
-    fixed_settings = dict()
+    fixed_settings = {}
     for key, setting in settings.items():
         if 'path' in key.lower():
             if isinstance(setting, str):

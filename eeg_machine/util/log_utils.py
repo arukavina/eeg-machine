@@ -8,7 +8,6 @@ import logging
 import logging.handlers
 import os
 
-import src
 import file_utils
 
 
@@ -43,7 +42,7 @@ import file_utils
 #     #                                              timestamp=timestamp)
 #
 #     # Logger
-#     my_log = logging.getLogger(eeg-machine.get_logger_name())
+#     my_log = logging.getLogger(eeg_machine.get_logger_name())
 #     my_log.propagate = False
 #     my_log.handlers = []
 #     my_log.setLevel(logging.DEBUG)
