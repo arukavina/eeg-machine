@@ -80,6 +80,9 @@ def extract(feature_folder,
 
     if sample_size is not None and sample_size < len(segments):
         segments = random.sample(segments, sample_size)
+    else:
+        eeg_logger.error(f'Sample size is {sample_size} greater than total number of segment {len(segments)}')
+        exit(-2)
 
     if workers > 1:
         pool = multiprocessing.Pool(processes=workers)

@@ -199,7 +199,7 @@ def split_experiment_data(interictal,
     :param do_segment_split: If True, will split the dataframes based on segment names.
     :param random_state: A set seed to ensure reproducibility of the experiments.
     :return: A partition of the concatenated interictal and preictal data frames into
-    two seperate and disjunct data frames, such that the first partition
+    two separated and disjunctive data frames, such that the first partition
     contains a ratio of *training_ratio* of all the data.
     """
 

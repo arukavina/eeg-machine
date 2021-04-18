@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for running the feature extraction and model training.
+Module for running the feature extraction.
 GPL
 """
 
@@ -21,10 +21,10 @@ from src.util import file_utils as fu
 from src.features import hills, wavelets, cross_correlate
 
 __author__ = 'Andrei Rukavina'
-__copyright__ = '2018-19, EGG-Machine'
+__copyright__ = '2021, EGG-Machine'
 __credits__ = ['Andrei Rukavina']
 __license__ = 'GPL'
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 __email__ = 'rukavina.andrei@gmail.com'
 __status__ = 'dev'
 

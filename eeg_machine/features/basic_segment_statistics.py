@@ -2,24 +2,30 @@
 
 """Module for getting and plotting some basic statistics of segments"""
 
+# Built-in/Generic Imports
 import glob
 import math
 import os
 import os.path
 import random
+import logging
 from collections import defaultdict
 
+# Libs
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats
 
-from src.datasets import segment
+# Own modules
+from src.datasets import segment as sg
 
 try:
     plt.style.use('ggplot')
 except AttributeError:
     pass
+
+eeg_logger = logging.getLogger(__name__)
 
 
 def get_filenames(feature_folder, glob_pattern, sample_size=None):
@@ -46,8 +52,7 @@ def load_segments(feature_folder, glob_pattern='*.mat', sample_size=None):
     :return: A DataFrame where all the given segments have been concatenated.
     """
     files = get_filenames(feature_folder, glob_pattern, sample_size)
-    segments = segment.DFSegment.from_mat_files(files)
-    return segments
+    return sg.DFSegment.from_mat_files(files)
 
 
 def median_absolute_deviation(data, subject_median=None, axis=0):
@@ -99,18 +104,18 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', metrics=None):
 
     class_results = defaultdict(list)
 
-    print("Folder: {}, Glob Suffix: {}".format(feature_folder, glob_suffix))
+    eeg_logger.info("Folder: {}, Glob Suffix: {}".format(feature_folder, glob_suffix))
     for segment_class in ['preictal', 'interictal', 'test']:
         glob_pattern = "*{}*{}*".format(segment_class, glob_suffix)
         files = get_filenames(feature_folder, glob_pattern)
         transformed = defaultdict(dict)
 
-        print("Glob Pattern {}".format(glob_pattern))
+        eeg_logger.info("Glob Pattern {} | Total: {}".format(glob_pattern, len(files)))
 
-        for f in files:
-            print("Processing {}".format(f))
+        for f in sorted(files):
+            eeg_logger.debug("Processing {}".format(f))
             basename = os.path.basename(f)
-            seg = segment.DFSegment.from_mat_file(f)
+            seg = sg.DFSegment.from_mat_file(f)
             if isinstance(metrics, dict):
                 for name, metric in metrics.items():
                     expr = metric.format(dataframe='seg.dataframe')
@@ -126,9 +131,11 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', metrics=None):
             method_frame = pd.DataFrame(list(segment_series), index=index)
             class_results[metric_name].append(method_frame)
 
-    complete_frame = pd.concat([pd.concat(frames) for method, frames in class_results.items()],
-                               keys=class_results.keys(), names=['metric', 'class', 'segment'])
-    return complete_frame
+    return pd.concat(
+        [pd.concat(frames) for method, frames in class_results.items()],
+        keys=class_results.keys(),
+        names=['metric', 'class', 'segment'],
+    )
 
 
 def get_default_metrics(subset=None):
@@ -176,8 +183,9 @@ def process_subject(feature_folder,
     if metrics is None:
         metrics = get_default_metrics(subset=subset)
 
-    class_results = load_and_transform_segments(feature_folder, metrics=metrics, glob_suffix=glob_suffix)
-    return class_results
+    return load_and_transform_segments(
+        feature_folder, metrics=metrics, glob_suffix=glob_suffix
+    )
 
 
 def calculate_statistics(feature_folder, csv_directory, glob_suffix='*', subset=None):
@@ -193,14 +201,19 @@ def calculate_statistics(feature_folder, csv_directory, glob_suffix='*', subset=
     """
     # This makes sure the path has a trailing '/', so that os.dirname will give the whole path
     slashed_path = os.path.join(feature_folder, '')
-    _, subject_folder_name = os.path.split(os.path.dirname(slashed_path))
-    filename = "{}_segments_statistics.csv".format(subject_folder_name)
+    dirs = sorted(glob.glob(slashed_path))
 
-    if not os.path.exists(csv_directory):
-        os.makedirs(csv_directory)
-    csv_path = os.path.join(csv_directory, filename)
-    class_results = process_subject(feature_folder, glob_suffix=glob_suffix, subset=subset)
-    class_results.to_csv(csv_path, sep='\t', float_format='%11.8f')
+    for d in dirs:
+        _, subject_folder_name = os.path.split(os.path.dirname(d))
+        filename = "{}_segments_statistics.csv".format(subject_folder_name)
+
+        if not os.path.exists(csv_directory):
+            os.makedirs(csv_directory)
+
+        csv_path = os.path.join(csv_directory, filename)
+        class_results = process_subject(feature_folder=d, glob_suffix=glob_suffix, subset=subset)
+        eeg_logger.info("Writing statistics file {} to disk".format(csv_path))
+        class_results.to_csv(csv_path, sep='\t', float_format='%11.8f')
 
 
 def read_stats(stat_file, metrics=None, use_cache=True):
@@ -218,14 +231,14 @@ def read_stats(stat_file, metrics=None, use_cache=True):
     cache = read_stats.cache
     if use_cache and stat_file in cache and metrics in cache[stat_file]:
         return cache[stat_file][metrics]
-    else:
-        stats_df = read_stats_csv(stat_file)
-        if metrics is not None:
-            stats_df = stats_df.loc[metrics]
-        reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
-        reshaped.sort_values(by='metric', axis=1)
-        read_stats.cache[stat_file][metrics] = reshaped
-        return reshaped
+    # else:
+    stats_df = read_stats_csv(stat_file)
+    if metrics is not None:
+        stats_df = stats_df.loc[metrics]
+    reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
+    reshaped.sort_values(by='metric', axis=1)
+    read_stats.cache[stat_file][metrics] = reshaped
+    return reshaped
 
 
 read_stats.cache = defaultdict(dict)
@@ -243,8 +256,7 @@ def read_folder(stats_folder, metrics=None):
     glob_pattern = os.path.join(stats_folder, '*segments_statistics.csv')
     files = glob.glob(glob_pattern)
     if files:
-        stats = pd.concat([read_stats(stat_file, metrics) for stat_file in files])
-        return stats
+        return pd.concat([read_stats(stat_file, metrics) for stat_file in files])
     else:
         raise IOError("No segment statistics file in folder {}".format(stats_folder))
 
@@ -269,7 +281,7 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     if use_cache and id(stats_df) in cache and (metric_name, aggregator) in cache[id(stats_df)]:
         return cache[id(stats_df)][(metric_name, aggregator)]
 
-    # The stats dataframes have a 2-level column index, where the first level are the channel names and the seconde
+    # The stats dataframes have a 2-level column index, where the first level are the channel names and second
     # the metric name. To get the metric but keep the channels we slice the first level with all the entries using
     # slice(None), this is equivalent to [:] for regular slices.
     if channel_ordering is None:
@@ -348,35 +360,3 @@ def read_subject_stats(stat_path):
     """
     stats_df = read_stats_csv(stat_path)
     return stats_df.groupby(level=('metric', 'class')).mean()
-
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="""Script for generating statistics about the segments""")
-
-    parser.add_argument("feature_folder",
-                        help="""The folder containing the features to be analyzed""")
-    parser.add_argument("--glob-suffix",
-                        help=("Unix-style glob patterns to select which files to run the analysis over."
-                              " This suffix will  be appended to the class label (eg 'interictal') so should not be "
-                              "expressed here. "
-                              "Be sure to encase the pattern in \" so it won't be expanded by the shell."),
-                        dest='glob_suffix', default='*')
-    parser.add_argument("--csv-directory",
-                        help="Which directory the statistics CSV file be written to.",
-                        dest='csv_directory',
-                        default='../../data/segment_statistics')
-    parser.add_argument("--metrics",
-                        nargs='+',
-                        help="A selection of statistics to collect",
-                        choices=get_default_metrics().keys(),
-                        dest='subset')
-    args = parser.parse_args()
-
-    print(args)
-    calculate_statistics(args.feature_folder, args.csv_directory, args.glob_suffix, args.subset)
-
-
-if __name__ == '__main__':
-    main()

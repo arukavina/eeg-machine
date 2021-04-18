@@ -3,8 +3,8 @@ Module for dealing with combined features
 """
 import pandas as pd
 
-import correlation_convertion
-import wavelet_classification
+from src.datasets import correlation_convertion
+from src.datasets import wavelet_classification
 
 
 def load(segment_files, **kwargs):

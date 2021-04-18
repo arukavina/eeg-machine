@@ -1,59 +1,53 @@
-"""
-------------------------------------------------------------------------------------------------------
-Script:    Module to configure logging
-------------------------------------------------------------------------------------------------------
-"""
-
-import sys
+# Built-in/Generic Imports
 import logging
+import sys
 import logging.handlers
 import os
 
-import src
-import file_utils
+# Own modules
+from src.util import file_utils
+
+PKG_LOGGER = logging.getLogger(__name__)
 
 
-def setup_logging(name, timestamp, file_components, optional_file_components, args, level=logging.INFO):
+def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./log'):
     """
     Sets up the logger for the classification.
     :param name: Logger instance name
     :param timestamp: The timestamp to apply to the file
-    :param file_components: mandatory file name dict
-    :param optional_file_components: optional file name parts
-    :param args: a dictionary with the arguments which are used by the classifier. This dict will be modified,
-                 removing items which shouldn't be sent to the classification function.
     :param level: Logging level from logging
+    :param log_path: Logging path
     :return: None
     """
 
-    log_dir = args['LOG_PATH']
-    del args['LOG_PATH']
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    msg_format = '%(asctime)s [%(levelname)8s] %(message)s (%(name)s - %(filename)s:%(lineno)s)'
+    date_format = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(fmt=msg_format, datefmt=date_format)
+    console_handler = logging.StreamHandler(stream=sys.stdout)
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(formatter)
+    PKG_LOGGER.addHandler(console_handler)
+    PKG_LOGGER.setLevel(logging.DEBUG)
+    PKG_LOGGER.propagate = False
+    PKG_LOGGER.info('finished logging setup!')
 
-    print("Logging to {}/ named: {}".format(log_dir, name))
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
 
-    log_file = file_utils.generate_filename(name, '.log',
-                                            components=file_components,
-                                            optional_components=optional_file_components,
-                                            timestamp=timestamp)
+    print("Logging to {}/ named: {}".format(log_path, name))
+
+    log_file = file_utils.generate_filename(name, '.log', timestamp=timestamp)
 
     # log_file_hist = file_utils.generate_filename(name, '_hist.log',
     #                                              components=file_components,
     #                                              optional_components=optional_file_components,
     #                                              timestamp=timestamp)
 
-    # Logger
-    my_log = logging.getLogger(src.get_logger_name())
-    my_log.propagate = False
-    my_log.handlers = []
-    my_log.setLevel(logging.DEBUG)
-
     formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
                                   '([%(filename)s::%(funcName)s) :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 
     # Handlers
-    fh_path = os.path.join(log_dir, log_file)
+    fh_path = os.path.join(log_path, log_file)
 
     file_handler = logging.FileHandler(fh_path)
     file_handler.setFormatter(formatter)
@@ -68,12 +62,16 @@ def setup_logging(name, timestamp, file_components, optional_file_components, ar
     std_handler.setFormatter(formatter)
     std_handler.setLevel(level)
 
-    my_log.addHandler(file_handler)
+    # Logger
+    PKG_LOGGER.addHandler(file_handler)
     # my_log.addHandler(file_handler_hist)
-    my_log.addHandler(std_handler)
+    PKG_LOGGER.addHandler(std_handler)
+    PKG_LOGGER.propagate = False
+    PKG_LOGGER.handlers = []
+    PKG_LOGGER.setLevel(level)
 
 
-def print_imports_versions(logger):
+def print_imports_versions():
     """
     Prints on logger the information about the version of all the imported modules
 
@@ -82,4 +80,4 @@ def print_imports_versions(logger):
     """
     for name, module in sorted(sys.modules.items()):
         if hasattr(module, '__version__'):
-            logger.info('{0} :: {1}'.format(name, module.__version__))
+            PKG_LOGGER.info('{0} :: {1}'.format(name, module.__version__))

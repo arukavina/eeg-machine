@@ -1,17 +1,17 @@
 """Module for doing the training of the models."""
+# Generic
 import logging
 
+# Libs
 import numpy as np
 import pandas as pd
-import sklearn
-import sklearn.ensemble
-import sklearn.linear_model
-import sklearn.metrics
-import sklearn.svm
-from sklearn import model_selection
-from sklearn.model_selection import (GridSearchCV, StratifiedKFold)
 
-from ..datasets import dataset
+import sklearn
+from sklearn import model_selection
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+
+# Own
+from src.datasets import dataset
 
 
 def get_model_class(method):
@@ -52,7 +52,6 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
              the parameters of the model.
     """
     param_grid = dict()  # This is the parameter grid which the grid search will go over
-
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
@@ -69,7 +68,7 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
         # Below are the parameters used by Mirowski et.al
         # param_grid =  [{'kernel': ['rbf'], 'C': [min_c, 2**3, 2**6, 2**9],
         #                 'gamma': [2**(-13), 2**(-7), 0.5]}]
-        # Fine-tuning based on the paramters found above
+        # Fine-tuning based on the parameters found above
         param_grid = [{'kernel': ['rbf'], 'C': 64*np.linspace(1/4, 4, 4),
                        'gamma': 0.0001220703125 * np.linspace(1/4, 4, 4)}]
 
@@ -129,10 +128,11 @@ def get_cv_generator(training_data, do_segment_split=True, random_state=None):
     """
     k_fold_kwargs = dict(n_splits=10, random_state=random_state)
     if do_segment_split:
-        cv = dataset.SegmentCrossValidator(training_data, model_selection.StratifiedKFold, **k_fold_kwargs)
+        return dataset.SegmentCrossValidator(
+            training_data, model_selection.StratifiedKFold, **k_fold_kwargs
+        )
     else:
-        cv = StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
-    return cv
+        return StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
 
 
 def train_model(interictal,
@@ -375,17 +375,17 @@ def cm_report(cm, labels, sep='\t'):
     Returns a pretty printed confusion matrix as a string.
     :param cm: The confusion matrix to use. Should support subscript with pair.
     :param labels: The labels to use for the classes.
-    :param sep: The seperator to use between columns of the matrix.
+    :param sep: The separator to use between columns of the matrix.
     :return: A string with a confusion matrix given by *cm*.
     """
-    columnwidth = max([len(x) for x in labels])
-    cm_lines = ["Colums show what the true values(rows) were classified as."]
+    column_width = max(len(x) for x in labels)
+    cm_lines = ["Columns show what the true values(rows) were classified as."]
 
     # The following is used to output each cell of the table. By passing a keyword argument 'format' to the string
     # format function, the format of the output value can be set
     cell = "{:{format}}"
-    names_format = "<{}".format(columnwidth)  # The names are left-justified
-    col_format = ">{}".format(columnwidth)  # The columns are right formatted
+    names_format = "<{}".format(column_width)  # The names are left-justified
+    col_format = ">{}".format(column_width)  # The columns are right formatted
 
     # Create the header string
     header_cells = [cell.format(label, format=col_format) for label in [""]+labels]

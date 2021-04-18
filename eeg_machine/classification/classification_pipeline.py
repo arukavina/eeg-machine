@@ -12,9 +12,9 @@ import numpy as np
 import src
 from src.util import file_utils
 from src.util.file_utils import FileHelper
-import submissions
-import seizure_modeling
-from ..datasets import dataset, features_combined, correlation_convertion, wavelet_classification
+from src.classification import submissions
+from src.classification import seizure_modeling
+from src.datasets import dataset, features_combined, correlation_convertion, wavelet_classification
 
 eeg_logger = logging.getLogger(src.get_logger_name())
 
@@ -107,13 +107,13 @@ def run_batch_classification(feature_folders,
                                                 file_components,
                                                 optional_file_components,
                                                 timestamp=timestamp)
-        # Let the submission path take precedence if it's a folder
+        # Let the scores path take precedence if it's a folder
         if scores_file is not None:
             scores_file = os.path.join(scores_file, filename)
         elif csv_directory is not None:
             scores_file = os.path.join(csv_directory, filename)
         else:
-            scores_file = os.path.join('..', '..', 'submissions', filename)
+            scores_file = os.path.join('..', '..', 'scores', filename)
 
     eeg_logger.info("Saving scores to {}".format(scores_file))
     with open(scores_file, 'w') as fp:
@@ -160,10 +160,12 @@ def load_features(feature_folders,
     feature_folders = sorted(FileHelper.expand_folders(feature_folders))
 
     if feature_type in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
-        if feature_type == 'wavelets' or feature_type == 'hills':
+
+        if feature_type in ['wavelets', 'hills']:
             feature_module = wavelet_classification
         else:
             feature_module = correlation_convertion
+
         for feature_folder in feature_folders:
             interictal, preictal, unlabeled = feature_module.load_data_frames(feature_folder,
                                                                               rebuild_data=rebuild_data,
@@ -512,7 +514,7 @@ def get_cli_args():
                         help="Which directory the classification CSV files should be written to.",
                         dest='csv_directory')
     parser.add_argument("--submission-file",
-                        help="""If this argument is supplied, a submissions file
+                        help="""If this argument is supplied, a score file
                         with the scores for the the test segments will be produced""",
                         dest='submission_file')
     parser.add_argument("--frame-length",
@@ -547,7 +549,7 @@ def get_cli_args():
                               " used. This should be a string with a sics_seizure_prediction"
                               " expression containing a similar data structure"
                               " to the grid_param argument to the cross "
-                              "validation grid search, but the values doesn't have to be sequences. ",
+                              "validation grid search, but the values doesn't have to be sequences. "
                               "It will be used instead of the default grid_params."),
                         dest='model_params')
     parser.add_argument("--random-state",

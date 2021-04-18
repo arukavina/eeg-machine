@@ -1,8 +1,7 @@
 """
-------------------------------------------------------------------------------------------------------
-Script:    Module holding some utilities for doing file related stuff
-------------------------------------------------------------------------------------------------------
+Module holding some utilities for doing file related stuff
 """
+
 # General
 import os.path
 import re
@@ -126,9 +125,9 @@ class FileHelper:
         canonical_folders = set(canonical_folders)
         new_folders = []
         for folder in feature_folders:
-            subfolders = set([sf for sf in os.listdir(folder) if os.path.isdir(os.path.join(folder, sf))])
+            sub_folders = set([sf for sf in os.listdir(folder) if os.path.isdir(os.path.join(folder, sf))])
 
-            common_folders = subfolders & canonical_folders
+            common_folders = sub_folders & canonical_folders
             if common_folders:
                 new_folders.extend([os.path.join(folder, common)
                                     for common
@@ -228,7 +227,7 @@ def create_path(p):
                 print('Can\'t create path {}: {}'.format(p, e))
 
 
-def generate_filename(prefix, suffix, components, optional_components=None, sep='-', timestamp=None):
+def generate_filename(prefix, suffix, components=None, optional_components=None, sep='-', timestamp=None):
     """
     Generates a filename given the arguments.
 
@@ -242,11 +241,14 @@ def generate_filename(prefix, suffix, components, optional_components=None, sep=
     :return: A string with the given file name parts joined together.
     """
 
+    if components is None:
+        components = []
+
     name_components = [prefix]
     if timestamp is not None:
         name_components.append(timestamp)
 
-    name_components = name_components + components
+    name_components += components
 
     if optional_components is not None:
         for optional_component, value in optional_components.items():

@@ -6,6 +6,7 @@ Module for Extracting Hills features.
 Creates a feature dictionary from a Segment object, according to the provided transformation function.
 GPL
 """
+
 # Built-in/Generic Imports
 import logging
 import sys
@@ -54,6 +55,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
     windows_in_frame = int(feature_length_seconds / window_size)
     iters = int(segment.get_duration() / feature_length_seconds)
 
+    # TODO: Do I still want this?
     segment.raw_plot(2)
 
     # Create Epochs object according to defined window size
@@ -96,7 +98,7 @@ def extract_features(segment_paths,
                      output_dir,
                      workers=1,
                      sample_size=None,
-                     old_segment_format=True,
+                     matlab_segment_format=True,
                      resample_frequency=None,
                      normalize_signal=False,
                      stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
@@ -111,7 +113,7 @@ def extract_features(segment_paths,
     :param output_dir:
     :param workers:
     :param sample_size:
-    :param old_segment_format:
+    :param matlab_segment_format:
     :param resample_frequency:
     :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
     :param normalize_signal:
@@ -124,12 +126,12 @@ def extract_features(segment_paths,
     eeg_logger.info("Starting Hills Extractor")
 
     feature_extractor.extract(segment_paths,
-                              extract_features_for_segment,
+                              extractor_function=extract_features_for_segment,  # This is defined above
                               # Arguments for feature_extractor.extract
                               output_dir=output_dir,
                               workers=workers,
                               sample_size=sample_size,
-                              matlab_segment_format=old_segment_format,
+                              matlab_segment_format=matlab_segment_format,
                               resample_frequency=resample_frequency,
                               stats_directory=stats_directory,
                               normalize_signal=normalize_signal,

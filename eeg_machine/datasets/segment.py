@@ -4,7 +4,6 @@
 """
 Module for loading and manipulating  EEG segments.
 """
-from __future__ import absolute_import
 
 import glob
 import os.path
@@ -60,9 +59,9 @@ def load_and_standardize(mat_filename, stats_glob='/Users/arukavina/Documents/EE
                          center_name='median', scale_name='mean', matlab_segment_format=True,
                          k=10):
     """
-    Loads the segment given by *mat_name* and returns a standardized version. The values for standardization (scaling
-    factor and center values) should be in a segment statistics file in *stats_folder* and must have been produced
-    earlier.
+    Loads the segment given by *mat_filename* and returns a standardized version. The values for standardization (
+    scaling factor and center values) should be in a segment statistics file in *stats_glob* and must have been
+    produced earlier.
     :param mat_filename: A path to the segment to load. Must contain the name of the subject in the file.
     :param stats_glob: A folder which keeps statistics files produced by the module basic_segment_statistics. The file
                         to use will be inferred from the subject name in mat_filename, and a stats_file with the same
