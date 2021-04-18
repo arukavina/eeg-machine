@@ -16,15 +16,13 @@ import mne
 from itertools import chain
 
 # Own modules
-import src
-
-from src.features import feature_extractor
-from src.features import wavelets
-from src.features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+from eeg_machine.features import feature_extractor
+from eeg_machine.features import wavelets
+from eeg_machine.features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
 
 
 mne.set_log_level(verbose='WARNING')
-eeg_logger = logging.getLogger(src.get_logger_name())
+hills_logger = logging.getLogger(__name__)
 
 
 def extract_features_for_segment(segment, transformation=None, feature_length_seconds=60, window_size=5):
@@ -45,7 +43,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
         get 10 frames. The length of the lists then depends on the window_size,
         number of channels and number of frequency bands we are examining.
     """
-    eeg_logger.info("Using extraction function: HILLS {}".format('extract_features_for_segment'))
+    hills_logger.info("Using extraction function: HILLS {}".format('extract_features_for_segment'))
 
     if transformation is None:
         transformation = FFT_TF_xcorr(1, 48, 400, 'usf')
@@ -79,7 +77,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
                          " %d, got %d instead." % (iters, len(feature_dict)))
 
     for index, feature in sorted(feature_dict.items()):
-        eeg_logger.info("Features per Iter: {}".format(len(feature)))
+        hills_logger.info("Features per Iter: {}".format(len(feature)))
 
         break
 
@@ -87,7 +85,7 @@ def extract_features_for_segment(segment, transformation=None, feature_length_se
 
 
 def get_transform(transformation=None, **kwargs):
-    eeg_logger.dubug("Starting")
+    hills_logger.dubug("Starting")
     if transformation is None:
         return FFT_TF_xcorr(1, 48, 400, 'usf')
     else:
@@ -101,7 +99,7 @@ def extract_features(segment_paths,
                      matlab_segment_format=True,
                      resample_frequency=None,
                      normalize_signal=False,
-                     stats_directory='/Users/arukavina/Documents/EEG/Statistics/*.csv',
+                     stats_glob='/Users/arukavina/Documents/EEG/Statistics/*.csv',
                      only_missing_files=True,
                      file_handler=None,
                      feature_length_seconds=60,
@@ -115,7 +113,7 @@ def extract_features(segment_paths,
     :param sample_size:
     :param matlab_segment_format:
     :param resample_frequency:
-    :param stats_directory: Directory where to find the stats of files. Center must be calculated in advance
+    :param stats_glob: Directory where to find the stats of files. Center must be calculated in advance
     :param normalize_signal:
     :param only_missing_files:
     :param file_handler: fh instance
@@ -123,7 +121,7 @@ def extract_features(segment_paths,
     :param window_size:
     :return:
     """
-    eeg_logger.info("Starting Hills Extractor")
+    hills_logger.info("Starting Hills Extractor")
 
     feature_extractor.extract(segment_paths,
                               extractor_function=extract_features_for_segment,  # This is defined above
@@ -133,7 +131,7 @@ def extract_features(segment_paths,
                               sample_size=sample_size,
                               matlab_segment_format=matlab_segment_format,
                               resample_frequency=resample_frequency,
-                              stats_directory=stats_directory,
+                              stats_directory=stats_glob,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
                               file_handler=file_handler,

@@ -9,7 +9,6 @@ from scipy.signal import resample, hann, filtfilt, iirfilter, lfilter, butter
 
 from sklearn import preprocessing
 
-import src
 
 # Optional modules for trying out different transforms
 
@@ -23,10 +22,10 @@ try:
 except ImportError:
     pass
 
-eeg_logger = logging.getLogger(src.get_logger_name())
+transforms_logger = logging.getLogger(__name__)
 
 
-# NOTE(mike): All transforms take in data of the shape (NUM_CHANNELS, NUM_FEATURES)
+# NOTE(ar): All transforms take in data of the shape (NUM_CHANNELS, NUM_FEATURES)
 # Although some have been written work on the last axis and may work on any-dimension data.
 
 class Filter:
@@ -481,7 +480,7 @@ class FreqCorrelation:
         assert scale_option in ('us', 'usf', 'none')
         assert with_corr or with_eigen
 
-        eeg_logger.debug(self.get_name())
+        transforms_logger.debug(self.get_name())
 
     def get_name(self):
         selections = []
@@ -550,7 +549,7 @@ class TimeCorrelation:
         assert scale_option in ('us', 'usf', 'none')
         assert with_corr or with_eigen
 
-        eeg_logger.debug(self.get_name())
+        transforms_logger.debug(self.get_name())
 
     def get_name(self):
         selections = []
@@ -577,7 +576,7 @@ class TimeCorrelation:
         # if data1.shape[1] > self.max_hz:
         #     data1 = Resample(self.max_hz).apply(data1)
 
-        eeg_logger.debug("Scaling option: {}".format(self.scale_option))
+        transforms_logger.debug("Scaling option: {}".format(self.scale_option))
 
         if self.scale_option == 'usf':
             data1 = UnitScaleFeat().apply(data1)
@@ -586,14 +585,14 @@ class TimeCorrelation:
 
         data1 = CorrelationMatrix().apply(data1)
 
-        eeg_logger.debug("Using Eigen Values: {}".format(self.with_eigen))
+        transforms_logger.debug("Using Eigen Values: {}".format(self.with_eigen))
 
         if self.with_eigen:
             w = Eigenvalues().apply(data1)
 
         out = []
 
-        eeg_logger.debug("With Corr: {}".format(self.with_corr))
+        transforms_logger.debug("With Corr: {}".format(self.with_corr))
 
         if self.with_corr:
             data1 = upper_right_triangle(data1)

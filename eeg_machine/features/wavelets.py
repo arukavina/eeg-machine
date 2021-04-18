@@ -21,13 +21,11 @@ import numpy as np
 from itertools import chain
 
 # Own modules
-import src
-
-from src.datasets import segment as sg
-from src.features import feature_extractor
+from eeg_machine.datasets import segment as sg
+from eeg_machine.features import feature_extractor
 
 mne.set_log_level(verbose='WARNING')
-eeg_logger = logging.getLogger(src.get_logger_name())
+wavelets_logger = logging.getLogger(__name__)
 
 
 class EpochShim(object):
@@ -75,9 +73,10 @@ def epochs_from_segment(segment, window_size=5.0):
     # raw.set_eeg_reference('average', projection=True)  # set EEG average reference
     # raw.plot(block=True, title=segment.get_filename())
 
-    random_id = int(random.randrange(sys.maxsize))
+    # random_id = int(random.randrange(sys.maxsize))
+    random_id = int(random.randrange(2147483647))  # In Python2 sys.maxint = 2147483647, in Python3 it doesn't exist
     events = make_fixed_length_events(raw, random_id, window_duration=window_size)
-    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size)  # , add_eeg_ref=False)
+    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size, baseline=(0, 0))  # , add_eeg_ref=False)
 
     return epochs
 
@@ -100,6 +99,7 @@ def make_fixed_length_events(raw, event_id, window_duration=5.):
 
     if not isinstance(event_id, int):
         raise ValueError('event_id must be an integer')
+
     total_duration = int(np.floor(raw.n_times / frequency))
     floored_samples_per_window = int(np.floor(frequency * window_duration))
     floored_windows_per_segment = int(np.floor(total_duration /
@@ -134,7 +134,7 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     depends on the window_size, number of channels and number of frequency bands we are examining.
     """
 
-    eeg_logger.info("Using extraction function: WAVELETS {}".format('extract_features_for_segment'))
+    wavelets_logger.info("Using extraction function: WAVELETS {}".format('extract_features_for_segment'))
 
     # Here we define how many windows we will have to concatenate
     # in order to create the features we want
@@ -161,14 +161,14 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
                 # fewer frames than the theoretical value in the final segment,
                 # so we need to guard against IndexError
                 except IndexError:
-                    eeg_logger.warn("Out of index at index:{} offset:{} i:{}".format(index, offset, i))
+                    wavelets_logger.warn("Out of index at index:{} offset:{} i:{}".format(index, offset, i))
                     pass
         # Flatten the list of lists
         feature_dict[index] = list(chain.from_iterable(feature_list))
 
     if len(feature_dict) != iters:
-        eeg_logger.warn("Wrong number of features created, expected {}, got {} instead.".format(iters,
-                                                                                                len(feature_dict)))
+        wavelets_logger.warn("Wrong number of features created, expected {}, got {} instead.".format(iters,
+                                                                                                     len(feature_dict)))
 
     return feature_dict
 
@@ -237,7 +237,7 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                                             use_fft=True,
                                             return_itc=True,
                                             n_cycles=2)
-        eeg_logger.info("TFD: " + tfd)
+        wavelets_logger.info("TFD: " + tfd)
         n_channels, n_frequencies, n_samples = tfd.shape
 
         # Calculate the phase synchrony for all frequencies in the range
@@ -259,7 +259,7 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                     phase_diff = np.absolute(angles.sum() / n_samples)
 
                     if (phase_diff > 1.0) or (phase_diff < 0.0):
-                        eeg_logger.warn("Invalid phase difference: {}".format(phase_diff))
+                        wavelets_logger.warn("Invalid phase difference: {}".format(phase_diff))
                     # Gather the values in an lower triangular matrix
                     freq_phase_diff[ch_i, ch_j] = phase_diff
 

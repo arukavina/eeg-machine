@@ -18,7 +18,7 @@ import pandas as pd
 import scipy.stats
 
 # Own modules
-from src.datasets import segment as sg
+from eeg_machine.datasets import segment as sg
 
 try:
     plt.style.use('ggplot')

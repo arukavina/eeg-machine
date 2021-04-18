@@ -3,20 +3,21 @@
 Module for calculating the cross correlation between channels.
 """
 
+# Built-in/Generic Imports
 import csv
 import os.path
 import re
 import logging
 from collections import defaultdict
 
+# Libs
 import numpy as np
 
-import src
-from src.util import file_utils
+# Own modules
+from eeg_machine.util import file_utils as fu
+from eeg_machine.features import feature_extractor
 
-from src.features import feature_extractor
-
-eeg_logger = logging.getLogger(src.get_logger_name())
+xcorr_logger = logging.getLogger(__name__)
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
@@ -235,8 +236,8 @@ def get_csv_name(f, csv_directory, window_length=None):
 
 def csv_naming_function(segment_path, output_dir, window_length=None, **kwargs):
     """Wrapper for get_csv_name for use as a feature_extrator naming function."""
-    if file_utils.get_subject(output_dir) is None:
-        subject = file_utils.get_subject(segment_path)
+    if fu.FileHelper.get_subject(output_dir) is None:
+        subject = fu.FileHelper.get_subject(segment_path)
         output_dir = os.path.join(output_dir, subject)
 
     return get_csv_name(segment_path, output_dir, window_length)
@@ -303,7 +304,7 @@ def extract_features(segment_paths,
     :return: None
     """
 
-    eeg_logger.info("Starting XCorrelations (XCrorr) extractor")
+    xcorr_logger.info("Starting XCorrelations (XCrorr) extractor")
 
     time_delta_config = setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config)
 
