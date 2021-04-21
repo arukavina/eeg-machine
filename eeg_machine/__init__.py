@@ -1,3 +1,12 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+------------------------------------------------------------------------------------------------------
+Script:    System __init__ file. Sets up logging
+------------------------------------------------------------------------------------------------------
+"""
+
 # Built-in/Generic Imports
 import logging
 import sys
@@ -7,7 +16,7 @@ import os
 # Own modules
 from eeg_machine.util import file_utils
 
-EEG_LOGGER = logging.getLogger(__name__)
+eeg_logger = logging.getLogger(__name__)
 
 
 def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./../logs'):
@@ -26,49 +35,35 @@ def setup_logging(name, timestamp, level=logging.DEBUG, log_path=r'./../logs'):
     print("Logging to {}/ named: {}".format(log_path, name))
 
     log_file = file_utils.generate_filename(name, '.log', timestamp=timestamp)
+    log_file_hist = file_utils.generate_filename(name, '_hist.log', timestamp=timestamp)
 
-    # log_file_hist = file_utils.generate_filename(name, '_hist.log',
-    #                                              components=file_components,
-    #                                              optional_components=optional_file_components,
-    #                                              timestamp=timestamp)
-
-    # formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
-    #                              '([%(filename)s|%(name)s::%(funcName)s) :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
     formatter = logging.Formatter('%(asctime)s [%(threadName)s-%(process)d] [%(levelname)s] '
                                   '[%(name)s::%(funcName)s()] :: %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 
     # Handlers
-    fh_path = os.path.join(log_path, log_file)
 
+    # Simple
+    fh_path = os.path.join(log_path, log_file)
     file_handler = logging.FileHandler(fh_path)
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
 
-    # fh_hist_path = os.path.join(log_dir, log_file_hist)
-    # file_handler_hist = logging.handlers.RotatingFileHandler(fh_hist_path, 'a', 512 * 1024, backupCount=20)
-    # file_handler_hist.setLevel(logging.DEBUG)
-    # file_handler_hist.setFormatter(formatter)
+    # Rotating
+    fh_hist_path = os.path.join(log_path, log_file_hist)
+    file_handler_hist = logging.handlers.RotatingFileHandler(fh_hist_path, 'a', 512 * 1024, backupCount=20)
+    file_handler_hist.setFormatter(formatter)
+    file_handler_hist.setLevel(logging.DEBUG)
 
+    # Streaming
     std_handler = logging.StreamHandler(sys.stdout)
     std_handler.setFormatter(formatter)
     std_handler.setLevel(level)
 
     # Logger
-    EEG_LOGGER.addHandler(file_handler)
-    # my_log.addHandler(file_handler_hist)
-    EEG_LOGGER.addHandler(std_handler)
-    EEG_LOGGER.propagate = False
-    EEG_LOGGER.setLevel(level)
+    eeg_logger.addHandler(file_handler)
+    eeg_logger.addHandler(file_handler_hist)
+    eeg_logger.addHandler(std_handler)
+    eeg_logger.propagate = False
+    eeg_logger.setLevel(level)
 
-    EEG_LOGGER.info('Logging configured at project level!')
-
-
-def print_imports_versions():
-    """
-    Prints on logger the information about the version of all the imported modules
-
-    :return: None
-    """
-    for name, module in sorted(sys.modules.items()):
-        if hasattr(module, '__version__'):
-            EEG_LOGGER.info('{0} :: {1}'.format(name, module.__version__))
+    eeg_logger.info('Logging configured at project level!')

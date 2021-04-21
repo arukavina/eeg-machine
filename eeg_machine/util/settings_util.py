@@ -1,14 +1,18 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
 """
 ------------------------------------------------------------------------------------------------------
 Script:    Module to process settings.json
 ------------------------------------------------------------------------------------------------------
 """
+
 # Generics
 import json
 import os.path
 
-# Own
-from . import file_utils as fu
+# Own modules
+from eeg_machine import file_utils as fu
 
 REQUIRED_KEYS = (
     "TRAIN_DATA_PATH",
@@ -36,12 +40,11 @@ def get_file_components(fixed_settings):
     """
     file_components = []
     for key, setting in fixed_settings.items():
-        if 'path' not in key.lower():
-            if key in REQUIRED_KEYS:
-                if isinstance(setting, dict):
-                    file_components.append(":".join(get_file_components(get_file_components)))
-                else:
-                    file_components.append(":".join((str(key).lower(), str(setting))))
+        if 'path' not in key.lower() and key in REQUIRED_KEYS:
+            if isinstance(setting, dict):
+                file_components.append(":".join(get_file_components(setting)))
+            else:
+                file_components.append(":".join((str(key).lower(), str(setting))))
 
     return file_components
 
@@ -52,14 +55,13 @@ def get_optional_file_components(fixed_settings):
     :param fixed_settings: Setting json processed file
     :return: Dict of non-required keys + values
     """
-    optional_file_components = dict()
+    optional_file_components = {}
     for key, setting in fixed_settings.items():
-        if 'path' not in key.lower():
-            if key not in REQUIRED_KEYS:
-                if isinstance(setting, dict):
-                    optional_file_components.update(get_optional_file_components(setting))
-                else:
-                    optional_file_components[key.lower()] = str(setting)
+        if 'path' not in key.lower() and key not in REQUIRED_KEYS:
+            if isinstance(setting, dict):
+                optional_file_components.update(get_optional_file_components(setting))
+            else:
+                optional_file_components[key.lower()] = str(setting)
 
     return optional_file_components
 
