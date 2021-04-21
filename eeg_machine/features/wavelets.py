@@ -73,10 +73,12 @@ def epochs_from_segment(segment, window_size=5.0):
     # raw.set_eeg_reference('average', projection=True)  # set EEG average reference
     # raw.plot(block=True, title=segment.get_filename())
 
-    # random_id = int(random.randrange(sys.maxsize))
+    # AR(2021-04-17): NME can't cope with maxsize as IDs, changing to INTMAX -manually- as there is no constant now.
+    # Before: random_id = int(random.randrange(sys.maxsize))
     random_id = int(random.randrange(2147483647))  # In Python2 sys.maxint = 2147483647, in Python3 it doesn't exist
     events = make_fixed_length_events(raw, random_id, window_duration=window_size)
-    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size, baseline=(0, 0))  # , add_eeg_ref=False)
+    # AR(2021-04-17): Adding extra arg baseline=(0, 0)). Python2.7 used to use: add_eeg_ref=False
+    epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0, tmax=window_size, baseline=(0, 0))
 
     return epochs
 
