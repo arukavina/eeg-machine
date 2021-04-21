@@ -29,7 +29,7 @@ def extract_features(settings, fh):
     Extract features based on the dictionary *settings*. The type of features extracted depends on the key
     'FEATURE_TYPE' and should be either 'xcorr', 'wavelets' or 'hills'.
 
-    :param settings: A dictionary with settings. Usually created from the json file 'SETTINGS.json' in the project root
+    :param settings: A dictionary with settings. Usually created from the json file 'FEATURE_SETTINGS.json' in the project root
                      directory.
     :param fh: File Handler
     :return: None. The features will be saved as csv files to the directory given by the key 'FEATURE_PATH' in the
@@ -72,7 +72,7 @@ def extract_features(settings, fh):
                                window_size=window_size)
 
     elif 'xcorr' in settings['FEATURE_TYPE'] or 'cross correlations' in settings['FEATURE_TYPE']:
-        # TODO: Andrei seguir aca
+        # TODO: Andrei, seguir dubug de features aca
         cross_correlate.extract_features(segment_paths=train_segment_paths,
                                          output_dir=output_path,
                                          workers=workers,
@@ -119,12 +119,12 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Extracts features and trains model")
-    parser.add_argument("settings", help="Path to the SETTINGS.json to use for the training")
+    parser.add_argument("settings", help="Path to the FEATURE_SETTINGS.json to use for the training")
 
     args = vars(parser.parse_args())
     if args is None:
-        print("Using default root SETTINGS.json location")
-        args = {'settings': r'SETTINGS.json'}
+        print("Using default root FEATURE_SETTINGS.json location")
+        args = {'settings': r'FEATURE_SETTINGS.json'}
 
     settings = su.get_settings(args['settings'])
 

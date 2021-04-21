@@ -30,12 +30,12 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Extracts features and trains model")
-    parser.add_argument("settings", help="Path to the SETTINGS.json to use for the training")
+    parser.add_argument("settings", help="Path to the FEATURE_SETTINGS.json to use for the training")
 
     args = vars(parser.parse_args())
     if args is None:
-        print("Using default root SETTINGS.json location")
-        args['settings'] = r'SETTINGS.json'
+        print("Using default root FEATURE_SETTINGS.json location")
+        args['settings'] = r'FEATURE_SETTINGS.json'
 
     settings = su.get_settings(args['settings'])
 
