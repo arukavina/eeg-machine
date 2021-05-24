@@ -38,16 +38,9 @@ def hills_features(segments,
                    stats_directory,
                    feature_length_seconds,
                    window_size):
-
-    hills.extract_features(segments,
-                           csv_directory,
-                           workers=workers,
-                           resample_frequency=resample_frequency,
-                           file_handler=file_handler,
-                           normalize_signal=normalize_signal,
-                           stats_directory=stats_directory,
-                           feature_length_seconds=feature_length_seconds,
-                           window_size=window_size)
+    hills.extract_features(segments, csv_directory, workers=workers, resample_frequency=resample_frequency,
+                           file_handler=file_handler, normalize_signal=normalize_signal,
+                           feature_length_seconds=feature_length_seconds, window_size=window_size)
 
 
 def wavelets_features(segments,
@@ -59,16 +52,9 @@ def wavelets_features(segments,
                       stats_directory,
                       feature_length_seconds,
                       window_size):
-
-    wavelets.extract_features(segments,
-                              csv_directory,
-                              workers=workers,
-                              resample_frequency=resample_frequency,
-                              file_handler=file_handler,
-                              normalize_signal=normalize_signal,
-                              stats_directory=stats_directory,
-                              feature_length_seconds=feature_length_seconds,
-                              window_size=window_size)
+    wavelets.extract_features(segments, csv_directory, workers=workers, resample_frequency=resample_frequency,
+                              file_handler=file_handler, normalize_signal=normalize_signal,
+                              feature_length_seconds=feature_length_seconds, window_size=window_size)
 
 
 def cross_correlate_features(segments,
@@ -78,13 +64,8 @@ def cross_correlate_features(segments,
                              file_handler,
                              normalize_signal,
                              window_size):
-
-    cross_correlate.extract_features(segments,
-                                     csv_directory,
-                                     workers=workers,
-                                     resample_frequency=resample_frequency,
-                                     file_handler=file_handler,
-                                     normalize_signal=normalize_signal,
+    cross_correlate.extract_features(segments, csv_directory, workers=workers, resample_frequency=resample_frequency,
+                                     file_handler=file_handler, normalize_signal=normalize_signal,
                                      window_size=window_size)
 
 

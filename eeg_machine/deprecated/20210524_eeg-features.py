@@ -8,6 +8,7 @@ Module for running the feature extraction and model training.
 # Built-in/Generic Imports
 import datetime
 import logging
+import os
 
 # Own
 from eeg_machine import setup_logging
@@ -80,16 +81,13 @@ def extract_features(settings, fh):
                                          file_handler=fh)
 
     elif 'wavelets' in settings['FEATURE_TYPE']:
-        wavelets.extract_features(segment_paths=train_segment_paths,
-                                  output_dir=output_path,
-                                  workers=workers,
-                                  window_size=settings['FEATURE_SETTINGS']['WINDOW_SIZE'],
-                                  file_handler=fh,
-                                  feature_length_seconds=window_size * frame_length)
+        wavelets.extract_features(segment_paths=train_segment_paths, output_dir=output_path, workers=workers,
+                                  file_handler=fh, feature_length_seconds=window_size * frame_length,
+                                  window_size=settings['FEATURE_SETTINGS']['WINDOW_SIZE'])
 
     elif 'combined' in settings['FEATURE_TYPE']:  # Must go first
         hills.extract_features(segment_paths=train_segment_paths,
-                               output_dir=output_path,
+                               output_dir=os.path.join(output_path, 'hills'),
                                workers=workers,
                                sample_size=sample_size,
                                matlab_segment_format=old_segment_format,
@@ -102,17 +100,14 @@ def extract_features(settings, fh):
                                window_size=window_size)
 
         cross_correlate.extract_features(segment_paths=train_segment_paths,
-                                         output_dir=output_path,
+                                         output_dir=os.path.join(output_path, 'xcorr'),
                                          workers=workers,
                                          window_size=settings['FEATURE_SETTINGS']['WINDOW_SIZE'],
                                          file_handler=fh)
 
-        wavelets.extract_features(segment_paths=train_segment_paths,
-                                  output_dir=output_path,
-                                  workers=workers,
-                                  window_size=settings['FEATURE_SETTINGS']['WINDOW_SIZE'],
-                                  file_handler=fh,
-                                  feature_length_seconds=window_size * frame_length)
+        wavelets.extract_features(segment_paths=train_segment_paths, output_dir=os.path.join(output_path, 'wavelets'),
+                                  workers=workers, file_handler=fh, feature_length_seconds=window_size * frame_length,
+                                  window_size=settings['FEATURE_SETTINGS']['WINDOW_SIZE'])
 
 
 def main():
@@ -137,8 +132,7 @@ def main():
             ('train_path', settings['TRAIN_DATA_PATH']),
             ('test_path', settings['TEST_DATA_PATH']),
             ('cat_column', settings['CAT_COLUMN']),
-            ('class_labels', settings['CLASS_LABELS']),
-            ('logger', eeg_logger)
+            ('class_labels', settings['CLASS_LABELS'])#, ('logger', eeg_logger)
         ])
 
     try:
