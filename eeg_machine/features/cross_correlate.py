@@ -5,7 +5,8 @@ Module for calculating the cross correlation between channels.
 
 # Built-in/Generic Imports
 import csv
-import os.path
+import os
+import datetime
 import re
 import logging
 from collections import defaultdict
@@ -14,13 +15,13 @@ from collections import defaultdict
 import numpy as np
 
 # Own modules
+from eeg_machine import setup_logging
 from eeg_machine.util import file_utils as fu
 from eeg_machine.features import feature_extractor
 
-xcorr_logger = logging.getLogger(__name__)
+eeg_logger = logging.getLogger(__name__)
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
-
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
 
@@ -33,8 +34,13 @@ def convert_channel_name(name):
         return name
 
 
-def calculate_cross_correlations(s, time_delta_config, channels=None, window_length=None,
-                                 segment_start=None, segment_end=None, all_time_deltas=False,
+def calculate_cross_correlations(s,
+                                 time_delta_config,
+                                 channels=None,
+                                 window_length=None,
+                                 segment_start=None,
+                                 segment_end=None,
+                                 all_time_deltas=False,
                                  old_csv_format=False):
     """
     Calculates the maximum cross-correlation of all pairs of channels in the segment *s*.
@@ -43,7 +49,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
     :param time_delta_config: A dictionary with channel pairs as keys, and time delta range triplets as values.
                               The triplets define the time lags to use for the given channel pairs and should be given
                               in seconds. For example (-0.2, 0.2, 0.1) will calculate the correlation at the time lags
-                              [-0.2, -0.1, 0.0, 0.1, 0.2]. The dictionary can have a channel pair ('default', 'default)
+                              [-0.2, -0.1, 0.0, 0.1, 0.2]. The dictionary can have a channel pair ('default', 'default')
                               which will be used for any pair which isn't explicitly specified.
     :param channels: A collection of channels to calculate the correlation over. Can be used to constrain the
                      calculation to a subset of the channels.
@@ -61,6 +67,9 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
              as a single channel pair at a single window and time lag, the new format has the dictionaries as all the
              channel pairs for a specific window and time lag.
     """
+
+    eeg_logger.info("Using extraction function: XCORR {}".format('calculate_cross_correlations'))
+
     if channels is None:
         channels = s.get_channels()
 
@@ -111,10 +120,10 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                                                                 t_offset,
                                                                 correlation))
 
+    table = []
     # We should return a list of dictionaries, where the keys of each dictionary are the same and will be the columns
     # of the csv file
     if old_csv_format:
-        table = []
         for (channel_i, channel_j), result_tuples in sorted(results.items()):
             for start_sample, end_sample, t_offset, correlation in sorted(result_tuples):
                 table.append(dict(channel_i=channel_i,
@@ -123,7 +132,6 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                                   end_sample=end_sample,
                                   t_offset=t_offset,
                                   correlation=correlation))
-        return table
     else:
         start_sample_grouped = defaultdict(lambda: defaultdict(dict))
 
@@ -143,7 +151,8 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                            t_offset=t_offset)
                 row.update(channel_correlations)
                 table.append(row)
-        return table
+
+    return table
 
 
 def maximum_crosscorrelation(x, y, time_delta_range, all_time_deltas=False):
@@ -245,9 +254,15 @@ def csv_naming_function(segment_path, output_dir, window_length=None, **kwargs):
 
 def setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config_file):
     """Returns a timedelta specification"""
-    time_delta_config = dict()
-    time_delta_config['default', 'default'] = (
-        min(time_delta_begin, -time_delta_begin), time_delta_end, time_delta_step)
+
+    time_delta_config = {
+        ('default', 'default'): (
+            min(time_delta_begin, -time_delta_begin),
+            time_delta_end,
+            time_delta_step,
+        )
+    }
+
     if time_delta_config_file is not None:
         with open(time_delta_config_file) as csv_file:
             csv_reader = csv.DictReader(csv_file, delimiter='\t')
@@ -258,6 +273,7 @@ def setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_del
                 end = float(row['end'])
                 step = float(row['step'])
                 time_delta_config[channel_i, channel_j] = (min(begin, -begin), end, step)
+
     return time_delta_config
 
 
@@ -278,7 +294,7 @@ def extract_features(segment_paths,
                      segment_start=None,
                      segment_end=None,
                      all_time_deltas=False,
-                     old_csv_format=False):
+                     matlab_file_format=False):
     """
     Calculates the cross-correlation between the channels in the given segments.
     Saves the results to a csv file per segment file.
@@ -300,11 +316,11 @@ def extract_features(segment_paths,
     :param segment_start:
     :param segment_end:
     :param all_time_deltas:
-    :param old_csv_format:
+    :param matlab_file_format:
     :return: None
     """
 
-    xcorr_logger.info("Starting XCorrelations (XCrorr) extractor")
+    eeg_logger.info("Starting XCorrelations (XCrorr) extractor")
 
     time_delta_config = setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config)
 
@@ -325,7 +341,7 @@ def extract_features(segment_paths,
                               segment_start=segment_start,
                               segment_end=segment_end,
                               all_time_deltas=all_time_deltas,
-                              old_csv_format=old_csv_format, )
+                              old_csv_format=matlab_file_format)
 
 
 def main():
@@ -338,10 +354,15 @@ def main():
     parser.add_argument("segments",
                         help=("The files to process. This can either be the path to a matlab file holding the "
                               "segment or a directory holding such files."),
-                        nargs='+', metavar="SEGMENT_FILE")
+                        nargs='+',
+                        metavar="SEGMENT_FILE")
     parser.add_argument("--csv-directory",
                         help=("Directory to write the csv files to, if omitted, the files will be written to the same "
                               "directory as the segment"))
+    parser.add_argument("--matlab-segment-format",
+                        help="Use the old CSV format where the channel pairs are rows",
+                        action='store_true',
+                        dest='matlab_file_format')
     parser.add_argument("--time-delta-begin",
                         help=("Time delta in seconds to shift 'left' for the cross-correlations. May be a floating "
                               "point number. Should be a negative number, if not it will be negated."),
@@ -353,7 +374,7 @@ def main():
     parser.add_argument("--time-delta-step", help="Time delta range step in seconds.", type=float, default=0)
     parser.add_argument("--time-delta-config", help="A file holding time delta values for the different channels.")
     parser.add_argument("--all-time-deltas",
-                        help=("Includes the time delta vs. correlation for all time deltas, and not just the maimal, "
+                        help=("Includes the time delta vs correlation for all time deltas, and not just the minimal, "
                               "that is, all the correlations for all time steps in the time delta range. Warning: this "
                               "might use a lot of memory. A factor of (time_delta_begin - time_delta_end)/time_step "
                               "more memory."),
@@ -363,15 +384,13 @@ def main():
                               "length in seconds. If this argument is omitted, the whole segment will be used."),
                         type=float)
     parser.add_argument("--segment-start",
-                        help="If this argument is supplied, only the segment after this time will be used.", type=float)
+                        help="If this argument is supplied, only the segment after this time will be used.",
+                        type=float)
     parser.add_argument("--segment-end",
                         help="If this argument is supplied, only the segment before this time will be used.",
                         type=float)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.",
                         type=int, default=1)
-    parser.add_argument("--old-csv-format", help="Use the old CSV format where the channel pairs are rows",
-                        action='store_true',
-                        dest='old_csv_format')
     parser.add_argument("--new-segment-format",
                         help="Use the old Segment format where the data is accesses through a numpy array",
                         action='store_false',
@@ -390,8 +409,44 @@ def main():
                         default=False,
                         action='store_true',
                         dest='normalize_signal')
+    parser.add_argument("--log-dir",
+                        help="Directory for writing classification log files.",
+                        default='./../../logs',
+                        dest='log_path')
+    parser.add_argument("--log-level",
+                        help="Logging module verbosity level:"
+                             "CRITICAL = 50"
+                             "ERROR = 40"
+                             "WARNING = 30"
+                             "INFO = 20"
+                             "DEBUG = 10"
+                             "NOTSET = 0",
+                        default=20,
+                        choices=[50, 40, 30, 20, 10, 0],
+                        type=int,
+                        dest='log_level')
 
     args = parser.parse_args()
+
+    timestamp = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+
+    setup_logging('eeg-xcorr-features', timestamp, args.log_level, args.log_path)
+
+    global eeg_logger
+    eeg_logger = logging.getLogger('eeg_machine.features.cross_correlate')
+
+    eeg_logger.info("Calculating Cross-Correlation (XCorr) features")
+
+    fh_args_dict = dict([
+        ('train_path', args.segments)
+    ])
+
+    try:
+        fh = fu.FileHelper(**fh_args_dict)
+    except AttributeError:
+        raise AttributeError('Attribute error when trying to instantiate class. Check __init__ or __doc__')
+    except Exception as e:
+        raise AttributeError('Something else is really wrong: {}'.format(e))
 
     channels = None
 
@@ -402,6 +457,7 @@ def main():
                      normalize_signal=args.normalize_signal,
                      window_size=args.window_length,
                      only_missing_files=args.only_missing_files,
+                     file_handler=fh,
                      # Arguments for calculate_cross_correlations
                      time_delta_config=args.time_delta_config,
                      time_delta_begin=args.time_delta_begin,
@@ -411,7 +467,7 @@ def main():
                      channels=channels,
                      segment_end=args.segment_end,
                      all_time_deltas=args.all_time_deltas,
-                     old_csv_format=args.old_csv_format)
+                     matlab_file_format=args.matlab_file_format)
 
 
 if __name__ == '__main__':

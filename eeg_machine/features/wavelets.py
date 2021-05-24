@@ -12,7 +12,7 @@ GPL
 """
 # Built-in/Generic Imports
 import logging
-import sys
+import datetime
 import random
 
 # Libs
@@ -21,11 +21,13 @@ import numpy as np
 from itertools import chain
 
 # Own modules
+from eeg_machine import setup_logging
 from eeg_machine.datasets import segment as sg
+from eeg_machine.util import file_utils as fu
 from eeg_machine.features import feature_extractor
 
 mne.set_log_level(verbose='WARNING')
-wavelets_logger = logging.getLogger(__name__)
+eeg_logger = logging.getLogger(__name__)
 
 
 class EpochShim(object):
@@ -118,7 +120,7 @@ def make_fixed_length_events(raw, event_id, window_duration=5.):
     return events
 
 
-def extract_features_for_segment(segment, feature_length_seconds=60, window_size=5, no_epochs=False):
+def calculate_segment_wavelet_synchrony(segment, feature_length_seconds=60, window_size=5, no_epochs=False):
     """
     Creates an SPLV [1] feature dictionary from a Segment object
 
@@ -136,7 +138,7 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     depends on the window_size, number of channels and number of frequency bands we are examining.
     """
 
-    wavelets_logger.info("Using extraction function: WAVELETS {}".format('extract_features_for_segment'))
+    eeg_logger.info("Using extraction function: WAVELETS {}".format('calculate_segment_wavelet_synchrony'))
 
     # Here we define how many windows we will have to concatenate
     # in order to create the features we want
@@ -163,14 +165,14 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
                 # fewer frames than the theoretical value in the final segment,
                 # so we need to guard against IndexError
                 except IndexError:
-                    wavelets_logger.warn("Out of index at index:{} offset:{} i:{}".format(index, offset, i))
+                    eeg_logger.warning("Out of index at index:{} offset:{} i:{}".format(index, offset, i))
                     pass
         # Flatten the list of lists
         feature_dict[index] = list(chain.from_iterable(feature_list))
 
     if len(feature_dict) != iters:
-        wavelets_logger.warn("Wrong number of features created, expected {}, got {} instead.".format(iters,
-                                                                                                     len(feature_dict)))
+        eeg_logger.warning("Wrong number of features created, expected {}, got {} instead.".format(iters,
+                                                                                                   len(feature_dict)))
 
     return feature_dict
 
@@ -211,6 +213,7 @@ def segment_wavelet_synchrony(segment, bands=None, window_size=5.0, no_epochs=Fa
     decomposition_dict = {}
 
     for band_name, (start_freq, stop_freq) in bands.items():
+        eeg_logger.info(f'Wavelet Synchrony for {band_name}([{start_freq},{stop_freq}]hz) band')
         decomposition_dict[band_name] = band_wavelet_synchrony(
             epochs, start_freq, stop_freq)
 
@@ -229,26 +232,34 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
     phase synchrony between the channels for an epoch/window.
     """
 
-    freqs = range(start_freq, stop_freq)
+    freqs = list(range(start_freq, stop_freq))
     tf_decompositions = []
+    n = 0
     for epoch in epochs:
+        eeg_logger.debug(f'Is epoch {n}, instance of Epoch/Evoked: {isinstance(epoch, (mne.epochs.BaseEpochs, mne.evoked.Evoked))}')
+        eeg_logger.debug(f'Sample Frequency: {epochs.info["sfreq"]}')
+        eeg_logger.debug(f'Frequencies: {list(range(start_freq, stop_freq))}')
         # Calculate the Wavelet transform for all freqs in the range
-        tfd = mne.time_frequency.tfr_morlet(epoch,
-                                            epochs.info['sfreq'],
-                                            freqs,
+        # AR(2021-05-23): This used to be: average=True (default), return_itc=True & output='power'
+        #   but this returns two TDR objects.
+        tfd = mne.time_frequency.tfr_morlet(epochs[n],
+                                            freqs=freqs,
+                                            n_cycles=2,
                                             use_fft=True,
-                                            return_itc=True,
-                                            n_cycles=2)
-        wavelets_logger.info("TFD: " + tfd)
-        n_channels, n_frequencies, n_samples = tfd.shape
+                                            output='complex',
+                                            average=False,
+                                            return_itc=False)
+        n += 1  # You can enumerate or iterate properly.
+
+        average_tfr_data = tfd.data[0]
+        eeg_logger.debug("TFD (channels, frequencies, samples): " + str(average_tfr_data.shape))
+        n_channels, n_frequencies, n_samples = average_tfr_data.shape
 
         # Calculate the phase synchrony for all frequencies in the range
-        av_phase_sync = np.zeros((n_channels, n_channels),
-                                 dtype=np.double)
+        av_phase_sync = np.zeros((n_channels, n_channels), dtype=np.double)
         for frequency_idx in range(n_frequencies):
-            freq_tfd = tfd[:, frequency_idx, :]
-            freq_phase_diff = np.zeros((n_channels, n_channels),
-                                       dtype=np.double)
+            freq_tfd = average_tfr_data[:, frequency_idx, :]
+            freq_phase_diff = np.zeros((n_channels, n_channels), dtype=np.double)
             for i, ch_i in enumerate(range(0, n_channels)[:-1]):
                 for ch_j in range(0, n_channels)[i+1:]:
                     # Get the wavelet coefficients for each channel
@@ -259,9 +270,8 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                     angles = ((ch_i_vals * ch_j_vals.conjugate()) /
                               (np.absolute(ch_i_vals) * np.absolute(ch_j_vals)))
                     phase_diff = np.absolute(angles.sum() / n_samples)
-
                     if (phase_diff > 1.0) or (phase_diff < 0.0):
-                        wavelets_logger.warn("Invalid phase difference: {}".format(phase_diff))
+                        eeg_logger.warning("Invalid phase difference: {}".format(phase_diff))
                     # Gather the values in an lower triangular matrix
                     freq_phase_diff[ch_i, ch_j] = phase_diff
 
@@ -279,7 +289,7 @@ def extract_features(segment_paths,
                      output_dir,
                      workers=1,
                      sample_size=None,
-                     old_segment_format=True,
+                     matlab_segment_format=True,
                      resample_frequency=None,
                      file_handler=None,
                      normalize_signal=False,
@@ -287,15 +297,17 @@ def extract_features(segment_paths,
                      feature_length_seconds=60,
                      window_size=5,
                      no_epochs=False,
-                     only_missing_files=True):
+                     only_missing_files=True,
+                     queue=None):
     """
     Performs feature extraction of the segment files found in *segment_paths*. The features are written to csv
     files in *output_dir*. See :py:function`feature_extractor.extract` for more info.
+    :param queue:
     :param segment_paths:
     :param output_dir:
     :param workers:
     :param sample_size:
-    :param old_segment_format:
+    :param matlab_segment_format:
     :param resample_frequency:
     :param normalize_signal:
     :param stats_directory:
@@ -304,21 +316,25 @@ def extract_features(segment_paths,
     :param window_size:
     :param no_epochs:
     :param only_missing_files:
+    :param queue:
     :return:
     """
 
+    eeg_logger.info("Starting Wavelets extractor")
+
     feature_extractor.extract(segment_paths,
-                              extract_features_for_segment,
+                              calculate_segment_wavelet_synchrony,
                               # Arguments for feature_extractor.extract
                               output_dir=output_dir,
                               workers=workers,
                               sample_size=sample_size,
-                              matlab_segment_format=old_segment_format,
+                              matlab_segment_format=matlab_segment_format,
                               resample_frequency=resample_frequency,
                               stats_directory=stats_directory,
                               normalize_signal=normalize_signal,
                               only_missing_files=only_missing_files,
                               file_handler=file_handler,
+                              queue=queue,
                               # Worker function kwargs:
                               feature_length_seconds=feature_length_seconds,
                               window_size=window_size,
@@ -334,6 +350,16 @@ def main():
                               "the segment or a directory holding such files."),
                         nargs='+',
                         metavar="SEGMENT_FILE")
+    parser.add_argument("--matlab-segment-format",
+                        help="Should the segment object be loaded with the old segment format.",
+                        action='store_true',
+                        dest='matlab_segment_format',
+                        default=False)
+    parser.add_argument("--only-missing-files",
+                        help="Should process only missing segments",
+                        action='store_true',
+                        dest='only_missing_files',
+                        default=False)
     parser.add_argument("--csv-directory",
                         help=("Directory to write the csv files to, if omitted, the files will be written to the "
                               "same directory as the segment"))
@@ -360,19 +386,69 @@ def main():
                         help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
+    parser.add_argument("--sample-size",
+                        help="Optionally sample this many samples from the input files.",
+                        type=float,
+                        dest='sample_size')
+    parser.add_argument("--normalize-signal",
+                        help="Whether to normalize the signal before performing the feature extraction",
+                        action='store_true',
+                        dest='normalize_signal',
+                        default=False)
+    parser.add_argument("--log-dir",
+                        help="Directory for writing classification log files.",
+                        default='./../../logs',
+                        dest='log_path')
+    parser.add_argument("--log-level",
+                        help="Logging module verbosity level:"
+                             "CRITICAL = 50"
+                             "ERROR = 40"
+                             "WARNING = 30"
+                             "INFO = 20"
+                             "DEBUG = 10"
+                             "NOTSET = 0",
+                        default=20,
+                        choices=[50, 40, 30, 20, 10, 0],
+                        type=int,
+                        dest='log_level')
 
     args = parser.parse_args()
 
+    timestamp = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+
+    q, ql = setup_logging('eeg-wavelet-features', timestamp, args.log_level, args.log_path)
+
+    global eeg_logger
+    eeg_logger = logging.getLogger('eeg_machine.features.wavelets')
+
+    eeg_logger.info("Calculating Wavelets features")
+
+    fh_args_dict = dict([
+        ('train_path', args.segments)
+    ])
+
+    try:
+        fh = fu.FileHelper(**fh_args_dict)
+    except AttributeError:
+        raise AttributeError('Attribute error when trying to instantiate class. Check __init__ or __doc__')
+    except Exception as e:
+        raise AttributeError('Something else is really wrong: {}'.format(e))
+
     extract_features(args.segments,
-                     # Arguments for feature_extractor.extract
                      output_dir=args.csv_directory,
                      workers=args.workers,
                      sample_size=args.sample_size,
+                     matlab_segment_format=args.matlab_segment_format,
                      resample_frequency=args.resample_frequency,
-                     # Worker function kwargs:
+                     file_handler=fh,
+                     normalize_signal=False,
                      feature_length_seconds=args.feature_length,
                      window_size=args.window_size,
-                     no_epochs=args.no_epochs)
+                     no_epochs=args.no_epochs,
+                     only_missing_files=args.only_missing_files,
+                     queue=q)
+
+    ql.stop()
 
 
 if __name__ == '__main__':
